@@ -6,6 +6,7 @@ from gym.spaces import utils
 
 class W_gym(gym.Env):
     metadata = {"render_mode": None, "render_fps": None, "dt": 100}
+    R_default = {'R_advance', 0, 'R_error', -1}
     def __init__(self, render_mode = None, window_size = (512, 512), dt = 100, render_fps = None):
         metadata = W_tools.W_dict_kwargs()
         self.metadata = self.metadata.update(metadata)
@@ -18,15 +19,48 @@ class W_gym(gym.Env):
         super().reset(seed = seed)
         if self.render_mode == "human":
             self.render()
+        self.reward = 0 # total reward
+        self.reward_external = 0 # actual reward that the animal receives
+        self.reward_internal = 0 # shaping reward
         obs = self._get_obs()
         info = self._get_info()
         return obs if not return_info else (obs, info)
 
     def reset_trial(self):
         self.t = 0
+        self.timer = 0
+        self.trialID = self.trialID + 1
+        self.release_hold()
+        self.obs = np.zeros(self.observation_space.shape)
+
+    def reset_block(self):
+        self.trialID = 0
+
+    def release_hold(self):
+        self.action_to_hold = None
+        
+    def check_matchaction(self, action, action_correct):
+        if action == action_correct:
+            is_error = False
+        else:
+            is_error = True
+        return is_error
+
+    def check_holdaction(self, action, valid_actions = None):
+        if self.action_to_hold is None:
+            is_error = False
+            if valid_actions is None or action in valid_actions:
+                self.action_to_hold = action
+        else:
+            if action == self.action_to_hold:
+                is_error = False
+            else:
+                is_error = True
+        return is_error    
 
     def step(self):
         self.t = self.t + self.dt
+        self.timer = self.timer + self.dt
     
     def setup_rendermode(self, render_mode = None):
         self.metadata['render_mode'] = render_mode
@@ -75,6 +109,12 @@ class W_gym(gym.Env):
             pygame.display.quit()
             pygame.quit()
 
+    def _get_obs(self):
+        return self.obs
+
+    def _get_info(self): # needs to return more things
+        return {'total-reward': self.reward}
+
 class W_gym_grid2D(W_gym):
     def __init__(self, nx, ny, ndim_obs, **kwarg):
         super().__init__(kwarg)
@@ -90,9 +130,19 @@ class W_gym_grid2D(W_gym):
         pos = np.array([(i, j) for i, j in zip(xv, yv)])
         return pos
 
-    def get_zero_observation(self):
-        return np.zeros(self.observation_space.shape)
+    def blankscreen(self):
+        self.currentscreen = np.zeros(self.observation_space.shape)
+        
+    def draw(self, x, y, channel):
+        channelID = np.where(channel == self.map_item2dim)[0]
+        self.currentscreen[x, y, channelID] = 1
 
+    def flip(self, is_clear = True):
+        obs = self.currentscreen
+        if is_clear:
+            self.blankscreen()
+        return obs
+    
     def setup_map_item2dim(self, **kwarg):
         self.map_item2dim = W_tools.W_dict_kwargs()
 
@@ -138,10 +188,11 @@ class grid2D():
         if x0 is not None and y0 is not None:
             self.pos_grid2D = np.array([x0, y0])
     
-    def move(self, dx, dy):
+    def move(self, dx, dy, option = None, **kwarg):
         d = np.array([dx, dy])
         pos = d + self.pos_grid2D
         self.pos_grid2D = self.restrict2range(pos)
+        return self.get_gaze(option, kwarg)
 
     def restrict2range(self, pos):
         for i in range(2):
@@ -149,4 +200,13 @@ class grid2D():
                 pos[i] = self.xy_range[i][0]
             if pos[i] > self.xy_range[i][1]:
                 pos[i] = self.xy_range[i][1]
-        return pos
+        return 
+    
+    def get_gaze(self, option = "xy", myspace = None):
+        x, y = (self.pos_grid2D[0], self.pos_grid2D[1])
+        if option is None or option == "xy":
+            return x, y
+        elif option == "space":
+            obs = np.zeros(option.shape)
+            obs[x, y] = 1
+            return utils.flatten(myspace, obs)
