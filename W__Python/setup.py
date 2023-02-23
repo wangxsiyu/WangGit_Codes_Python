@@ -1,9 +1,9 @@
 import setuptools
 
 setuptools.setup(
-    name='W_Gym',
+    name='W_Python',
     version = '0.0.0',
-    description='siyu''s Gym functions',
+    description='siyu''s python functions',
     author='Siyu Wang',
     author_email='wangxsiyu@gmail.com',
     packages = setuptools.find_packages(exclude=''),

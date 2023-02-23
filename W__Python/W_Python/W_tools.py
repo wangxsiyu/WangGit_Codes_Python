@@ -11,3 +11,8 @@ def W_dict_kwargs():
         if key != 'self':
             kwargs[key] = values[key]
     return kwargs
+
+def enlist(a):
+    if not type(a) == type([]):
+        a = [a]
+    return a

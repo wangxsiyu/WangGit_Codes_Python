@@ -1,8 +1,8 @@
 setup.py
+W_Python/W_tools.py
+W_Python/__init__.py
 W_Python.egg-info/PKG-INFO
 W_Python.egg-info/SOURCES.txt
 W_Python.egg-info/dependency_links.txt
 W_Python.egg-info/not-zip-safe
 W_Python.egg-info/top_level.txt
-W_Python_Codes/W_tools.py
-W_Python_Codes/__init__.py
