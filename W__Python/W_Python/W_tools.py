@@ -16,3 +16,7 @@ def enlist(a):
     if not type(a) == type([]):
         a = [a]
     return a
+
+def W_dict_updateonly(dict1, dict2):
+    dict1.update((k, dict2[k]) for k in dict1.keys() & dict2.keys())
+    return dict1

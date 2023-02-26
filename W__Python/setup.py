@@ -6,7 +6,7 @@ setuptools.setup(
     description='siyu''s python functions',
     author='Siyu Wang',
     author_email='wangxsiyu@gmail.com',
-    packages = setuptools.find_packages(exclude=''),
+    packages = setuptools.find_packages(),
     install_requires =[],
     zip_safe=False
 )
