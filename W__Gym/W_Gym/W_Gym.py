@@ -7,6 +7,10 @@ class W_Gym_render(gym.Env):
     currentscreen = None
     window = None
     clock = None
+    font = None
+    canvas = None
+    text_T = None
+    text_R = None
     metadata_render = {'render_mode': None, 'window_size': [512, 512], 'render_fps': None}
     def __init__(self, render_mode = None, window_size = [512, 512], \
                  render_fps = None, dt = 1, \
@@ -34,18 +38,35 @@ class W_Gym_render(gym.Env):
     def setup_rendermode(self, render_mode = None):
         if render_mode is None:
             render_mode = self.metadata_render['render_mode']
+        else:
+            self.metadata_render['render_mode'] = render_mode
         if render_mode == "human":
             import pygame  # import here to avoid pygame dependency with no render
             pygame.init()
             pygame.display.init()
             self.window = pygame.display.set_mode(self.metadata_render['window_size'])
             self.clock = pygame.time.Clock()
+            self.font = pygame.font.Font('freesansbold.ttf', 32)
+            self.set_text('text_T', f"t = {0}")
 
-    def _render_frame_update(self, canvas):
+    def set_text(self, attr, str):
+        black = (0, 0, 0)
+        red = (255, 0, 0)
+        setattr(self, attr, self.font.render(str, True, red, black))
+
+    def _render_frame_update(self):
+        canvas = self.canvas
         if self.metadata_render['render_mode'] == "human":
             import pygame
             assert self.window is not None
             self.window.blit(canvas, canvas.get_rect())
+            if self.text_T is not None:
+                trect = self.text_T.get_rect()
+                wsize = pygame.display.get_window_size()
+                trect.center = tuple(map(lambda i, j: i-j, wsize, trect.center))
+                self.window.blit(self.text_T, trect)
+            if self.text_R is not None:
+                self.window.blit(self.text_R, self.text_R.get_rect())
             pygame.event.pump()
             pygame.display.update()
             self.clock.tick(self.metadata_render["render_fps"])
@@ -70,35 +91,42 @@ class W_Gym_render(gym.Env):
     def render(self, option = None, *arg, **kwarg):
         if self.metadata_render['render_mode'] is None:
             return
-        canvas = self._render_frame_create()
+        self.canvas = self._render_frame_create()
         option = W.enlist(option)
         for x in option:
-            canvas = self.render_frame(canvas, x, *arg, **kwarg)
-        self._render_frame_update(canvas)
+            self.render_frame(x, *arg, **kwarg)
+        self._render_frame_update()
 
-    def render_frame(self, canvas, option = None, *arg, **kwarg):
+    def render_frame(self, option = None, *arg, **kwarg):
+        canvas = self.canvas
         if option is None:
             assert hasattr(self, '_render_frame')
-            return self._render_frame(canvas, *arg, **kwarg)    
+            self.canvas = self._render_frame(canvas, *arg, **kwarg)    
         elif option == "action":
-            return self._render_frame_action(canvas, *arg, **kwarg)
+            self.canvas = self._render_frame_action(canvas, *arg, **kwarg)
         elif option == "obs":
-            return self._render_frame_obs(canvas, *arg, **kwarg)
+            self.canvas = self._render_frame_obs(canvas, *arg, **kwarg)
         elif option == "reward":
-            return self._render_frame_reward(canvas, *arg, **kwarg)
+            self._render_frame_reward(*arg, **kwarg)
+        elif option == "time":
+            self._render_frame_time(*arg, **kwarg)
         else:
             assert hasattr(self, '_render_frame')
-            return self._render_frame(canvas, option, *arg, **kwarg)
+            self.canvas = self._render_frame(canvas, option, *arg, **kwarg)
 
     def _render_frame_obs(self, canvas, *arg, **kwarg):
         return canvas
     
-    def _render_frame_reward(self, canvas, *arg, **kwarg):
-        return canvas
-
     def _render_frame_action(self, canvas, *arg, **kwarg):
         return canvas
+    
+    def _render_frame_reward(self, *arg, **kwarg):
+        if hasattr(self, 'last_reward'):
+            self.set_text('text_R', f"R = {self.last_reward}")
 
+    def _render_frame_time(self, *arg, **kwarg):
+        self.set_text('text_T', f"game#{self.tot_trials}, { self.metadata_stage['stage_names'][self.stage] }, t = {self.t}")
+        
     def get_window_relative2absolute(self, pos):
         import numpy as np
         pos = np.array(pos)
@@ -122,12 +150,14 @@ class W_Gym(W_Gym_render):
     last_reward = 0
     last_action = None
     def __init__(self, n_maxTrials = np.Inf, \
-                 n_maxTrialsPerBlock = np.Inf, n_maxBlocks = np.Inf, \
-                 is_augment_obs = False, is_faltten_obs = True, **kwarg):
+                    n_maxTrialsPerBlock = np.Inf, n_maxBlocks = np.Inf, \
+                    is_augment_obs = True, is_faltten_obs = True, \
+                    is_ITI = True, **kwarg):
         super().__init__(**kwarg)
         self.n_maxTrials = n_maxTrials
         self.is_augment_obs = is_augment_obs
         self.is_faltten_obs = is_faltten_obs or self.is_augment_obs
+        self.is_ITI = is_ITI
         metadata = W.W_dict_kwargs()
         W.W_dict_updateonly(self.metadata_episode, metadata)
         self.setW_stage(["stages"], [np.Inf])
@@ -139,7 +169,11 @@ class W_Gym(W_Gym_render):
             self._reset()
         self.reset_block()
         self.reset_trial()
-        self.render(option = 'obs')
+        if hasattr(self, '_step_set_validactions'):
+            self._step_set_validactions()
+        if hasattr(self, '_draw_obs'):
+            self._draw_obs()
+        self.render(option = ['obs', 'time'])
         obs = self._get_obs()
         info = self._get_info()
         return obs if not return_info else (obs, info)
@@ -153,16 +187,58 @@ class W_Gym(W_Gym_render):
         self.t = 0
         self.timer = 0
         self.stage = 0
-        self.valid_choices = None
+        self.valid_actions = None
         if hasattr(self, '_reset_trial'):
             self._reset_trial()
     
     def step(self, action):
+        reward_E = 0
+        reward_I = 0
+        # advance time
         self.t = self.t + self.dt
         self.timer = self.timer + self.dt
-        reward_E, reward_I, is_done = self._step(action)
-        self.render(option = ["obs","action","reward"])
+        if hasattr(self, "_action_transform"):
+            action = self._action_transform(action)
+        # check valid actions
+        is_error = not (self.check_isvalidaction(action, self.valid_actions) or \
+            self.metadata_stage['stage_names'][self.stage] == "ITI")
+        # get consequences of actions
+        if not is_error and hasattr(self, '_step'):    
+            tR_ext, tR_int = self._step(action)
+            reward_E += tR_ext
+            reward_I += tR_int
+        # record current choice
+        self.last_action = action
+        # move on to the next time point
+        # is advance stage
+        is_advance = False
+        if not is_error:
+            if self.metadata_stage['stage_advanceuponaction'][self.stage] == 1:
+                is_advance = True
+            if self.timer >= self.metadata_stage['stage_timings'][self.stage]:
+                is_advance = True
+        # move on to the next stage  
+        if is_error or is_advance:
+            tR_ext, tR_int, is_done = self.advance_stage(is_error)
+            reward_E += tR_ext
+            reward_I += tR_int
+        else: 
+            is_done = False
+        # get consequences of actions (after)
+        if not is_error and hasattr(self, '_step_after'):    
+            tR_ext, tR_int = self._step_after(action)
+            reward_E += tR_ext
+            reward_I += tR_int
+
+        # set valid actions for the new observation
+        if hasattr(self, '_step_set_validactions'):
+            self._step_set_validactions()
+        if hasattr(self, '_draw_obs'):
+            self._draw_obs()
+
         self.last_reward = reward_E + reward_I
+        self.render(option = ["obs","action","reward","time"])
+        
         obs = self._get_obs()
         info = self._get_info()
         return obs, self.last_reward, is_done, None, info
@@ -173,7 +249,11 @@ class W_Gym(W_Gym_render):
         is_nexttrial = 0
         if is_error:
             R_int = self.Rewards['R_error']
-            is_nexttrial = 1
+            if "ITI" in self.metadata_stage['stage_names']:
+                self.stage = np.where([j == "ITI" for j in self.metadata_stage['stage_names']])[0][0]
+                self.timer = 0 # auto reset timer 
+            else:
+                is_nexttrial = 1
         else:
             R_int = self.Rewards['R_advance']
             self.stage = self.stage + 1
@@ -198,17 +278,22 @@ class W_Gym(W_Gym_render):
 
     def setW_stage(self, stage_names, stage_timings = None, \
                    stage_advanceuponaction = None):
+        if self.is_ITI and not "ITI" in stage_names:
+            stage_names.append("ITI")
         self.metadata_stage['stage_names'] = stage_names
         nstage = len(self.metadata_stage['stage_names'])
         if stage_timings is None:
             stage_timings = np.ones(nstage) * self.dt    
         if stage_advanceuponaction is None:
-            stage_advanceuponaction = np.zeros(nstage)
-        else:
-            c = np.zeros(nstage)
-            tid = np.array([np.where([j == i for j in self.metadata_stage['stage_names']]) for i in iter(stage_advanceuponaction)]).squeeze()
-            c[tid] = 1
-            stage_advanceuponaction = c
+            stage_advanceuponaction = "ITI"
+        elif not "ITI" in stage_advanceuponaction and "ITI" in self.metadata_stage['stage_names']:
+            stage_advanceuponaction.append("ITI")
+
+        c = np.zeros(nstage)
+        tid = np.array([np.where([j == i for j in self.metadata_stage['stage_names']]) for i in iter(stage_advanceuponaction)]).squeeze()
+        c[tid] = 1
+        stage_advanceuponaction = c
+        
         self.metadata_stage['stage_timings'] = stage_timings
         self.metadata_stage['stage_advanceuponaction'] = stage_advanceuponaction
 
@@ -234,11 +319,19 @@ class W_Gym(W_Gym_render):
         else:
             obs = self.obs
         if self.is_augment_obs:
-            action = np.zeros(self.action_space.n)
-            if self.last_action is not None:
-                action[self.last_action] = 1
+            action = self._action_flattened()
             obs = np.concatenate((obs, [self.last_reward], action))
         return obs
     
     def _get_info(self):
         return self.info
+
+    def _action_flattened(self):
+        if not hasattr(self, '_action_transform'):
+            action = np.zeros(self.action_space.n)
+        else:
+            assert hasattr(self, '_action_dimension')
+            action = np.zeros(self._action_dimension)
+        if self.last_action is not None:
+            action[self.last_action] = 1
+        return action

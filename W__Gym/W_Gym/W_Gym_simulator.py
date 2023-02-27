@@ -30,7 +30,10 @@ class W_env_simulator():
                     for event in pygame.event.get():
                         if event.type == pygame.KEYDOWN:
                             key = pygame.key.name(event.key)
-                            if key in self.keys_actions['keys']:
+                            if key == "escape":
+                                env.close()
+                                return
+                            elif key in self.keys_actions['keys']:
                                 kid = np.where([key == i for i in self.keys_actions['keys']])[0][0]
                                 action = self.keys_actions['actions'][kid]
             elif mode == "random":
@@ -38,3 +41,4 @@ class W_env_simulator():
             elif mode == "model":
                 action = model.predict(obs)
             obs, R, done, _, info = env.step(action)            
+                       
