@@ -23,3 +23,6 @@ def enlist(a):
 def W_dict_updateonly(dict1, dict2):
     dict1.update((k, dict2[k]) for k in dict1.keys() & dict2.keys())
     return dict1
+
+def W_onehot(x, n):
+    return np.squeeze(np.eye(n)[x])

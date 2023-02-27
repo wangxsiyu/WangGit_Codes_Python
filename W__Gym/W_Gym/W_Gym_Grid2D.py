@@ -34,8 +34,6 @@ class grid2D():
     
 class W_Gym_grid2D(W_Gym):
     plot_position = None
-    plot_params = dict()
-    obs_Name2DimNumber = None
     def __init__(self, nx, ny, ndim_obs = 1, **kwarg):
         # ndim_obs is the dimension of observation (number of input channels)
         super().__init__(**kwarg)
@@ -44,9 +42,6 @@ class W_Gym_grid2D(W_Gym):
         self.gaze = grid2D(0,2,0,2) # action object
         self._action_dimension = nx * ny
         self.plot_position = self.pos_grid(nx, ny) * self.metadata_render['window_size']
-
-    def setup_obs_Name2DimNumber(self, mydict):
-        self.obs_Name2DimNumber = mydict
         
     def pos_grid(self, nx, ny):
         x = np.linspace(0, 1, nx, endpoint=False) + 1/nx/2
@@ -63,13 +58,6 @@ class W_Gym_grid2D(W_Gym):
         x, y = xy
         channelID = self.obs_Name2DimNumber[channel_name]
         self.currentscreen[x, y, channelID] = 1
-
-    def _render_setGrid2Dparams(self, dictname, plottypes = None, colors = None, radius = None):
-        params = W.W_dict_kwargs()
-        del params['dictname']
-        for i in range(len(params['plottypes'])):
-            params['radius'][i] = params['radius'][i] * self.metadata_render['window_size']
-        self.plot_params.update({dictname: params})
 
     def _render_frame_grid2D(self, canvas, data, dictname):
         import pygame

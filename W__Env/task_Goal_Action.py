@@ -4,15 +4,15 @@ import numpy as np
 
 class task_Goal_Action(W_Gym_grid2D):
     p_reward = None
-    def __init__(self, p_reward = 1, **kwarg):
-        super().__init__(3,3,7, **kwarg)
+    def __init__(self, p_reward = 1, n_maxTrialsPerBlock = 30, **kwarg):
+        super().__init__(3,3,6, n_maxTrialsPerBlock = n_maxTrialsPerBlock, **kwarg)
         self.p_reward = p_reward
         # set action space
         self.action_space = spaces.Discrete(5) # stay, left, up, right, down
         # set rendering dimension names
         self.setup_obs_Name2DimNumber({'fixation':0, \
                                        'square':1, 'imageA':2, 'imageB':3, \
-                                        "dot1":4, "dot2":5, "reward":6})
+                                        "dot1":4, "dot2":5})
         # set stages
         stage_names = ["fix0", "flash1", "post1", \
                        "flash2", "post2", "choice1", "hold1", \
@@ -24,14 +24,14 @@ class task_Goal_Action(W_Gym_grid2D):
         self.ccs = np.array([3,7,5,1])
     
     def _setup_render(self):
-        plottypes = ["circle", "square", "square", "square", "square", "square", "square"]
-        colors = [(255,255,255), (255,255,255), (0, 255, 0), (0, 0, 255), (255,255,255), (255,255,255), (0, 255, 255)]
-        radius = [0.02, 0.04, 0.08, 0.08, 0.04, 0.08, 0.12]
-        self._render_setGrid2Dparams('obs', plottypes, colors, radius)
+        plottypes = ["circle", "square", "square", "square", "square", "square"]
+        colors = [(255,255,255), (255,255,255), (0, 255, 0), (0, 0, 255), (255,255,255), (255,255,255)]
+        radius = [0.02, 0.04, 0.08, 0.08, 0.04, 0.08]
+        self._render_setplotparams('obs', plottypes, colors, radius)
         plottypes = ["circle"]
         colors = [(255,0,0)]
         radius = [0.01]
-        self._render_setGrid2Dparams('action', plottypes, colors, radius)
+        self._render_setplotparams('action', plottypes, colors, radius)
         
     def _reset_block(self):
         self.oracle = np.random.randint(2)
@@ -70,7 +70,7 @@ class task_Goal_Action(W_Gym_grid2D):
         R_ext = 0
         R_int = 0
         # get reward
-        if self.metadata_stage['stage_names'][self.stage] == "ITI":
+        if not self.trial_is_error and self.metadata_stage['stage_names'][self.stage] == "ITI":
             if self.pos_choice2 == self.param_trial['ccc_pos'][self.oracle]: # correct choice
                 treward = self.probabilistic_reward(self.p_reward)
             else:
@@ -92,9 +92,7 @@ class task_Goal_Action(W_Gym_grid2D):
     
     def _draw_obs(self):
         # calculate new observation
-        if self.metadata_stage['stage_names'][self.stage] in ["ITI", "reward"]:
-            self.blankscreen()
-        elif self.metadata_stage['stage_names'][self.stage] in ["fix0","post1", "post2"]:
+        if self.metadata_stage['stage_names'][self.stage] in ["fix0","post1", "post2"]:
             self.draw((1,1),"fixation")
         elif self.metadata_stage['stage_names'][self.stage] in ["flash1"]:
             self.draw((1,1),"fixation")

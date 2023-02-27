@@ -4,6 +4,8 @@ import numpy as np
 
 class W_Gym_render(gym.Env):
     dt = None
+    obs_Name2DimNumber = None
+    plot_params = dict()
     currentscreen = None
     window = None
     clock = None
@@ -26,6 +28,56 @@ class W_Gym_render(gym.Env):
             self._setup_render()
         print(f"render mode: {self.metadata_render['render_mode']}")
 
+    # draw obs
+    def draw(self, channelname, val):
+        if channelname == "ITI":
+            return
+        idx = self.obs_Name2DimNumber[channelname]
+        if self.currentscreen is None:
+            self.currentscreen = np.zeros(self.observation_space_size())
+        self.currentscreen[idx] = val 
+
+    def observation_space_size(self): # deal with inconsistencies in gym output
+        if self.observation_space.shape == ():
+            return self.observation_space.n
+        else:
+            return self.observation_space.shape
+
+    def _render_frame_1D(self, canvas, data, dictname, positions = None):
+        import pygame
+        params = self.plot_params[dictname]
+        n_channel = len(data) 
+        if positions is None:
+            positions = np.array(self.window.get_size()) * [0.5,0.5]
+            positions = np.repeat(positions, n_channel).reshape(-1,2)
+        for ci in range(n_channel):
+            tcol = params['colors'][ci]
+            tplottype = params['plottypes'][ci]
+            tradius = params['radius'][ci]
+            tval = data[ci]
+            tpos = positions[ci]
+            if np.any(tval > 0): # show
+                if tplottype == "circle":
+                    pygame.draw.circle(canvas, tcol, tpos, np.mean(tradius))
+                elif tplottype == "square":
+                    pygame.draw.rect(canvas, tcol, 
+                        np.concatenate((-tradius + tpos, tradius * 2), axis = None), 0)
+                elif tplottype == "image":
+                    pass
+        return canvas
+    
+    def _render_frame_action(self, canvas, *arg, **kwarg):
+        canvas = self._render_frame_1D(canvas, W.enlist(self.last_action), 'action', np.array(self.window.get_size()) * [0.1, 0.1])
+        return canvas
+    
+    def _render_frame_obs(self, canvas, *arg, **kwarg):
+        obs = list()
+        lst = self.obs_Name2DimNumber
+        for i, j in lst.items():
+            obs.append(self.obs[np.array(j)])
+        canvas = self._render_frame_1D(canvas, obs, 'obs')
+        return canvas
+
     def flip(self, is_clear = True):
         self.obs = self.currentscreen
         if is_clear:
@@ -33,7 +85,7 @@ class W_Gym_render(gym.Env):
 
     def blankscreen(self):
         assert hasattr(self, 'observation_space')
-        self.currentscreen = np.zeros(self.observation_space.shape)
+        self.currentscreen = np.zeros(self.observation_space_size())
 
     def setup_rendermode(self, render_mode = None):
         if render_mode is None:
@@ -49,6 +101,16 @@ class W_Gym_render(gym.Env):
             self.font = pygame.font.Font('freesansbold.ttf', 32)
             self.set_text('text_T', f"t = {0}")
 
+    def setup_obs_Name2DimNumber(self, mydict):
+        self.obs_Name2DimNumber = mydict
+
+    def _render_setplotparams(self, dictname, plottypes = None, colors = None, radius = None):
+        params = W.W_dict_kwargs()
+        del params['dictname']
+        for i in range(len(params['plottypes'])):
+            params['radius'][i] = params['radius'][i] * self.metadata_render['window_size']
+        self.plot_params.update({dictname: params})
+        
     def set_text(self, attr, str):
         black = (0, 0, 0)
         red = (255, 0, 0)
@@ -114,12 +176,6 @@ class W_Gym_render(gym.Env):
             assert hasattr(self, '_render_frame')
             self.canvas = self._render_frame(canvas, option, *arg, **kwarg)
 
-    def _render_frame_obs(self, canvas, *arg, **kwarg):
-        return canvas
-    
-    def _render_frame_action(self, canvas, *arg, **kwarg):
-        return canvas
-    
     def _render_frame_reward(self, *arg, **kwarg):
         if hasattr(self, 'last_reward'):
             self.set_text('text_R', f"R = {self.last_reward}")
@@ -149,6 +205,7 @@ class W_Gym(W_Gym_render):
     metadata_stage = {'stage_names':None, 'stage_timings': None, 'stage_advanceuponaction': None}
     last_reward = 0
     last_action = None
+    # action_immediateadvance = None
     def __init__(self, n_maxTrials = np.Inf, \
                     n_maxTrialsPerBlock = np.Inf, n_maxBlocks = np.Inf, \
                     is_augment_obs = True, is_faltten_obs = True, \
@@ -158,6 +215,8 @@ class W_Gym(W_Gym_render):
         self.is_augment_obs = is_augment_obs
         self.is_faltten_obs = is_faltten_obs or self.is_augment_obs
         self.is_ITI = is_ITI
+        self.valid_actions = None
+        self.effective_actions = None
         metadata = W.W_dict_kwargs()
         W.W_dict_updateonly(self.metadata_episode, metadata)
         self.setW_stage(["stages"], [np.Inf])
@@ -187,7 +246,7 @@ class W_Gym(W_Gym_render):
         self.t = 0
         self.timer = 0
         self.stage = 0
-        self.valid_actions = None
+        self.trial_is_error = False
         if hasattr(self, '_reset_trial'):
             self._reset_trial()
     
@@ -202,19 +261,28 @@ class W_Gym(W_Gym_render):
         # check valid actions
         is_error = not (self.check_isvalidaction(action, self.valid_actions) or \
             self.metadata_stage['stage_names'][self.stage] == "ITI")
+        self.is_effective_action = self.check_isvalidaction(action, self.effective_actions)
+        # record current choice
+        self.last_action = action
         # get consequences of actions
         if not is_error and hasattr(self, '_step'):    
             tR_ext, tR_int = self._step(action)
             reward_E += tR_ext
-            reward_I += tR_int
-        # record current choice
-        self.last_action = action
+            reward_I += tR_int       
+        
         # move on to the next time point
-        # is advance stage
+        # check is advance stage
         is_advance = False
+        # self.action_immediateadvance = None
         if not is_error:
             if self.metadata_stage['stage_advanceuponaction'][self.stage] == 1:
-                is_advance = True
+                if self.effective_actions is None:
+                    effective_actions = self.valid_actions
+                else:
+                    effective_actions = self.effective_actions
+                if self.check_isvalidaction(action, effective_actions):
+                    is_advance = True
+                    # self.action_immediateadvance = action
             if self.timer >= self.metadata_stage['stage_timings'][self.stage]:
                 is_advance = True
         # move on to the next stage  
@@ -243,22 +311,30 @@ class W_Gym(W_Gym_render):
         info = self._get_info()
         return obs, self.last_reward, is_done, None, info
     
+
+    def find_stage(self, stagename):
+        return np.where([j == stagename for j in self.metadata_stage['stage_names']])[0][0]
+
     def advance_stage(self, is_error = False):
         is_done = False
         R_ext = 0
+        R_int = 0
         is_nexttrial = 0
+        if not is_error:
+            self.stage, is_error = self._advance_stage()
+            if not is_error:
+                R_int = self.Rewards['R_advance']
+                self.timer = 0 # auto reset timer 
+                if self.stage == len(self.metadata_stage['stage_names']):
+                    is_nexttrial = 1
+        
         if is_error:
+            self.trial_is_error = True
             R_int = self.Rewards['R_error']
             if "ITI" in self.metadata_stage['stage_names']:
-                self.stage = np.where([j == "ITI" for j in self.metadata_stage['stage_names']])[0][0]
+                self.stage = self.find_stage('ITI')
                 self.timer = 0 # auto reset timer 
             else:
-                is_nexttrial = 1
-        else:
-            R_int = self.Rewards['R_advance']
-            self.stage = self.stage + 1
-            self.timer = 0 # auto reset timer 
-            if self.stage == len(self.metadata_stage['stage_names']):
                 is_nexttrial = 1
         
         if is_nexttrial == 1:
@@ -272,6 +348,9 @@ class W_Gym(W_Gym_render):
 
         return R_ext, R_int, is_done
 
+    def _advance_stage(self):
+        return self.stage + 1
+
     # rewards
     def setW_reward(self, **kwarg):
         W.W_dict_updateonly(self.Rewards, kwarg)
@@ -284,14 +363,15 @@ class W_Gym(W_Gym_render):
         nstage = len(self.metadata_stage['stage_names'])
         if stage_timings is None:
             stage_timings = np.ones(nstage) * self.dt    
-        if stage_advanceuponaction is None:
-            stage_advanceuponaction = "ITI"
-        elif not "ITI" in stage_advanceuponaction and "ITI" in self.metadata_stage['stage_names']:
-            stage_advanceuponaction.append("ITI")
+        # if stage_advanceuponaction is None:
+        #     stage_advanceuponaction = "ITI"
+        # elif not "ITI" in stage_advanceuponaction and "ITI" in self.metadata_stage['stage_names']:
+        #     stage_advanceuponaction.append("ITI")
 
         c = np.zeros(nstage)
-        tid = np.array([np.where([j == i for j in self.metadata_stage['stage_names']]) for i in iter(stage_advanceuponaction)]).squeeze()
-        c[tid] = 1
+        if stage_advanceuponaction is not None:
+            tid = np.array([np.where([j == i for j in self.metadata_stage['stage_names']]) for i in iter(stage_advanceuponaction)]).squeeze()
+            c[tid] = 1
         stage_advanceuponaction = c
         
         self.metadata_stage['stage_timings'] = stage_timings
@@ -320,7 +400,9 @@ class W_Gym(W_Gym_render):
             obs = self.obs
         if self.is_augment_obs:
             action = self._action_flattened()
-            obs = np.concatenate((obs, [self.last_reward], action))
+            r = np.array(self.last_reward)
+            r = r.reshape((1,))
+            obs = np.concatenate((obs, r, action))
         return obs
     
     def _get_info(self):
