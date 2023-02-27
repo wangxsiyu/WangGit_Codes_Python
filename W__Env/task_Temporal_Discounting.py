@@ -24,7 +24,7 @@ class task_Temporal_Discounting(W_Gym):
     def _setup_render(self):
         plottypes = ["circle", "image", "square", "square", "square"]
         colors = [(255,255,255), (0,0,0), (255, 0, 0), (255, 0, 255), (0,255,0)]
-        radius = [0.02, 0, 0.04, 0.04, 0.04]
+        radius = [0.02, 0.1, 0.04, 0.04, 0.04]
         self._render_setplotparams('obs', plottypes, colors, radius)
         plottypes = ["square"]
         colors = [(255,0,0)]
@@ -33,9 +33,11 @@ class task_Temporal_Discounting(W_Gym):
 
     def _reset_trial(self):
         image = np.random.choice(9,1)
+        delay_vals = np.array([1, 5, 10])
+        drop_vals = np.array([2, 4, 6])
         delay = np.floor(image/3)
         drop = image % 3
-        param = {'image':image, 'delay':delay, "drop": drop} # 1,5,10 (change this)
+        param = {'image':image, 'delay':delay_vals[delay.astype('int32')], "drop": drop_vals[drop]} # 1,5,10 (change this)
         self.param_trial = param
         self.trial_choice = None
     
@@ -78,7 +80,17 @@ class task_Temporal_Discounting(W_Gym):
 
     def _draw_obs(self):
         if self.metadata_stage['stage_names'][self.stage] == "image":
-            self.draw("image", W.W_onehot(self.param_trial['image'], 9))
+            timg = W.W_onehot(self.param_trial['image'], 9)
+            self.draw("image", timg)
         else:
             self.draw(self.metadata_stage['stage_names'][self.stage], 1)
         self.flip()
+
+    def _render_frame_obs_format(self, obs, lst):
+        c = 0
+        for i, j in lst.items():
+            if i == "image":
+                obs[c] = obs[c].reshape((3,3))
+                obs[c] = obs[c] * 128 + np.any(obs[c] > 0) * 127
+            c += 1
+        return obs

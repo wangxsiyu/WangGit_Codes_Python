@@ -13,6 +13,7 @@ class W_Gym_render(gym.Env):
     canvas = None
     text_T = None
     text_R = None
+    image_lst = []
     metadata_render = {'render_mode': None, 'window_size': [512, 512], 'render_fps': None}
     def __init__(self, render_mode = None, window_size = [512, 512], \
                  render_fps = None, dt = 1, \
@@ -63,7 +64,7 @@ class W_Gym_render(gym.Env):
                     pygame.draw.rect(canvas, tcol, 
                         np.concatenate((-tradius + tpos, tradius * 2), axis = None), 0)
                 elif tplottype == "image":
-                    pass
+                    self._render_array(tval, tpos, tradius)
         return canvas
     
     def _render_frame_action(self, canvas, *arg, **kwarg):
@@ -75,6 +76,8 @@ class W_Gym_render(gym.Env):
         lst = self.obs_Name2DimNumber
         for i, j in lst.items():
             obs.append(self.obs[np.array(j)])
+        if hasattr(self, '_render_frame_obs_format'):
+            obs = self._render_frame_obs_format(obs, lst)
         canvas = self._render_frame_1D(canvas, obs, 'obs')
         return canvas
 
@@ -116,12 +119,34 @@ class W_Gym_render(gym.Env):
         red = (255, 0, 0)
         setattr(self, attr, self.font.render(str, True, red, black))
 
+
+    def _render_array(self, z, pos, tradius = [1,1]):
+        tradius = np.array(tradius)
+        if len(z.shape) < 2:
+            z = z.reshape(z.shape.__add__((1,)))
+        if len(z.shape) == 2:
+            z = np.stack([z,z,z], axis = 2)
+        rx = np.ceil(tradius[0]/z.shape[0])
+        ry = np.ceil(tradius[1]/z.shape[1])
+        r = np.min((rx, ry))
+        if r > 1:
+            r = r.astype('int')
+            z = np.kron(z, np.ones((r,r,1)))
+        import pygame
+        surf = pygame.surfarray.make_surface(z)
+        image = {'image':surf, 'pos':pos - np.array(surf.get_size())/2}
+        self.image_lst.append(image)
+
     def _render_frame_update(self):
         canvas = self.canvas
         if self.metadata_render['render_mode'] == "human":
             import pygame
             assert self.window is not None
             self.window.blit(canvas, canvas.get_rect())
+            if self.image_lst != []:
+                for x in self.image_lst:
+                    self.window.blit(x['image'], x['pos'])
+                self.image_lst = []
             if self.text_T is not None:
                 trect = self.text_T.get_rect()
                 wsize = pygame.display.get_window_size()
@@ -349,7 +374,8 @@ class W_Gym(W_Gym_render):
         return R_ext, R_int, is_done
 
     def _advance_stage(self):
-        return self.stage + 1
+        is_error = False
+        return self.stage + 1, is_error
 
     # rewards
     def setW_reward(self, **kwarg):
