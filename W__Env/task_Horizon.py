@@ -3,22 +3,24 @@ from W_Gym.W_Gym import W_Gym
 from W_Python import W_tools as W
 import numpy as np
 
-class task_Temporal_Discounting(W_Gym):
+class task_Horizon(W_Gym):
+    task_param = {'mu':[40, 60], 'sd':8, 'diff': [-20,-12,-8,-4,4,8,12,20], \
+        'n_instructed':4, 'horizon':[1,6]}
     def __init__(self, *arg, **kwarg):
-        super().__init__(*arg, **kwarg)
-        self.observation_space = spaces.Discrete(13) # 1 + 9 + 1 + 1 + 1
+        super().__init__(is_augment_obs = False, *arg, **kwarg)
+        self.observation_space = spaces.Discrete(15) # 1 + 2 + 2 + 10
         # set action space
-        self.action_space = spaces.Discrete(2) # fix, release
+        self.action_space = spaces.Discrete(3) # fix, L, R
         # set rendering dimension names
         self.setup_obs_Name2DimNumber({'fixation':0, \
-                                       'image':np.arange(1,10).tolist(), 'red':10, 'purple':11, \
-                                        'green':12})
+                                       'cue':[1,2], \
+                                        'reward':[3,4], \
+                                        'horizon': np.arange(5, 15).tolist()})
         # set stages
-        stage_names = ["fixation", "image", "red", \
-                       "purple", "purple_overtime", "green"]
-        stage_advanceuponaction = ["red", "purple"]
+        stage_names = ["fixation", "horizon", "choice", "reward"]
+        stage_advanceuponaction = ["choice"]
         self.setW_stage(stage_names = stage_names, stage_advanceuponaction = stage_advanceuponaction)
-        self.effective_actions = [1]
+        self.effective_actions = [1, 2]
 
     def _setup_render(self):
         plottypes = ["circle", "image", "square", "square", "square"]
