@@ -1,0 +1,11 @@
+setup.py
+W_Env/W_Env.py
+W_Env/__init__.py
+W_Env/task_Goal_Action.py
+W_Env/task_Horizon.py
+W_Env/task_Temporal_Discounting.py
+W_Env.egg-info/PKG-INFO
+W_Env.egg-info/SOURCES.txt
+W_Env.egg-info/dependency_links.txt
+W_Env.egg-info/not-zip-safe
+W_Env.egg-info/top_level.txt

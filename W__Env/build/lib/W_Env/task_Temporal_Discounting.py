@@ -3,34 +3,37 @@ from W_Gym.W_Gym import W_Gym
 from W_Python import W_tools as W
 import numpy as np
 
-class task_Horizon(W_Gym):
-    task_param = {'mu':[40, 60], 'sd':8, 'diff': [-20,-12,-8,-4,4,8,12,20], \
-        'n_instructed':4, 'horizon':[1,6]}
+class task_Temporal_Discounting(W_Gym):
     def __init__(self, *arg, **kwarg):
-        super().__init__(is_augment_obs = False, *arg, **kwarg)
-        self.observation_space = spaces.Discrete(15) # 1 + 2 + 2 + 10
+        super().__init__(*arg, **kwarg)
+        self.observation_space = spaces.Discrete(13) # 1 + 9 + 1 + 1 + 1
         # set action space
-        self.action_space = spaces.Discrete(3) # fix, L, R
+        self.action_space = spaces.Discrete(2) # fix, release
         # set rendering dimension names
         self.setup_obs_Name2DimNumber({'fixation':0, \
-                                       'cue':[1,2], \
-                                        'reward':[3,4], \
-                                        'horizon': np.arange(5, 15).tolist()})
+                                       'image':np.arange(1,10).tolist(), 'red':10, 'purple':11, \
+                                        'green':12})
         # set stages
-        stage_names = ["fixation", "horizon", "choice", "reward"]
-        stage_advanceuponaction = ["choice"]
+        stage_names = ["fixation", "image", "red", \
+                       "purple", "purple_overtime", "green"]
+        stage_advanceuponaction = ["red", "purple"]
         self.setW_stage(stage_names = stage_names, stage_advanceuponaction = stage_advanceuponaction)
-        self.effective_actions = [1, 2]
+        self.effective_actions = [1]
+
+    def _step_set_validactions(self):
+        if self.metadata_stage['stage_names'][self.stage] in ["fixation", "image"]:
+            self.valid_actions = [0]
+        else:
+            self.valid_actions = None
 
     def _setup_render(self):
         plottypes = ["circle", "image", "square", "square", "square"]
         colors = [(255,255,255), (0,0,0), (255, 0, 0), (255, 0, 255), (0,255,0)]
         radius = [0.02, 0.1, 0.04, 0.04, 0.04]
         self._render_setplotparams('obs', plottypes, colors, radius)
-        plottypes = ["square"]
-        colors = [(255,0,0)]
-        radius = [0.1]
-        self._render_setplotparams('action', plottypes, colors, radius)
+        plottypes = ["binary"]
+        plotparams = [1,2]
+        self._render_setplotparams('action', plottypes, plotparams = plotparams)
 
     def _reset_trial(self):
         image = np.random.choice(9,1)

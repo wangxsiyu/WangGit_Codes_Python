@@ -20,15 +20,20 @@ class task_Temporal_Discounting(W_Gym):
         self.setW_stage(stage_names = stage_names, stage_advanceuponaction = stage_advanceuponaction)
         self.effective_actions = [1]
 
+    def _step_set_validactions(self):
+        if self.metadata_stage['stage_names'][self.stage] in ["fixation", "image"]:
+            self.valid_actions = [0]
+        else:
+            self.valid_actions = None
+
     def _setup_render(self):
         plottypes = ["circle", "image", "square", "square", "square"]
         colors = [(255,255,255), (0,0,0), (255, 0, 0), (255, 0, 255), (0,255,0)]
         radius = [0.02, 0.1, 0.04, 0.04, 0.04]
         self._render_setplotparams('obs', plottypes, colors, radius)
-        plottypes = ["square"]
-        colors = [(255,0,0)]
-        radius = [0.1]
-        self._render_setplotparams('action', plottypes, colors, radius)
+        plottypes = ["binary"]
+        plotparams = [1,2]
+        self._render_setplotparams('action', plottypes, plotparams = plotparams)
 
     def _reset_trial(self):
         image = np.random.choice(9,1)

@@ -16,7 +16,7 @@ class W_Gym_render(gym.Env):
     image_lst = []
     metadata_render = {'render_mode': None, 'window_size': [512, 512], 'render_fps': None}
     def __init__(self, render_mode = None, window_size = [512, 512], \
-                 render_fps = None, dt = 1, \
+                 render_fps = None, dt = 1,\
                  **kwarg):
         self.dt = dt
         metadata_render = W.W_dict_kwargs()
@@ -44,31 +44,47 @@ class W_Gym_render(gym.Env):
         else:
             return self.observation_space.shape
 
-    def _render_frame_1D(self, canvas, data, dictname, positions = None):
+    def _render_frame_1D(self, canvas, data, dictname):
         import pygame
         params = self.plot_params[dictname]
         n_channel = len(data) 
-        if positions is None:
-            positions = np.array(self.window.get_size()) * [0.5,0.5]
-            positions = np.repeat(positions, n_channel).reshape(-1,2)
         for ci in range(n_channel):
             tcol = params['colors'][ci]
             tplottype = params['plottypes'][ci]
             tradius = params['radius'][ci]
+            if params['position'] is not None:
+                tpos = params['position'][ci]
+            else:
+                tpos = np.array(self.window.get_size()) * [0.5,0.5]
             tval = data[ci]
-            tpos = positions[ci]
             if np.any(tval > 0): # show
-                if tplottype == "circle":
-                    pygame.draw.circle(canvas, tcol, tpos, np.mean(tradius))
-                elif tplottype == "square":
-                    pygame.draw.rect(canvas, tcol, 
-                        np.concatenate((-tradius + tpos, tradius * 2), axis = None), 0)
-                elif tplottype == "image":
-                    self._render_array(tval, tpos, tradius)
+                canvas = self._render_draw(canvas, tplottype, tcol, tpos, tradius, tval)
+        return canvas
+    
+    def _render_draw(self, canvas, tplottype = None, tcol = None, tpos = None, tradius = None, tval = None):
+        import pygame
+        if tplottype == "circle":
+            pygame.draw.circle(canvas, tcol, tpos, np.mean(tradius))
+        elif tplottype == "square":
+            pygame.draw.rect(canvas, tcol, \
+                np.concatenate((-tradius + tpos, tradius * 2), axis = None), 0)
+        elif tplottype == "image":
+            self._render_array(tval, tpos, tradius)
         return canvas
     
     def _render_frame_action(self, canvas, *arg, **kwarg):
-        canvas = self._render_frame_1D(canvas, W.enlist(self.last_action), 'action', np.array(self.window.get_size()) * [0.1, 0.1])
+        if self.plot_params['action']['plottypes'] == ['binary']:
+            canvas = self._render_frame_binarychoice(canvas, np.array(self.plot_params['action']['plotparams']) == self.last_action)
+        else:
+            canvas = self._render_frame_1D(canvas, W.enlist(self.last_action), 'action')
+        return canvas
+    
+    def _render_frame_binarychoice(self, canvas, action):
+        tradius = np.array(self.window.get_size()) * [0.05, 0.05]
+        if action[0]:
+            self._render_draw(canvas, 'square', (255,0,0), np.array(self.window.get_size()) * [0.1,0.5], tradius)
+        if action[1]:
+            self._render_draw(canvas, 'square', (255,0,0), np.array(self.window.get_size()) * [0.9,0.5], tradius)
         return canvas
     
     def _render_frame_obs(self, canvas, *arg, **kwarg):
@@ -107,11 +123,17 @@ class W_Gym_render(gym.Env):
     def setup_obs_Name2DimNumber(self, mydict):
         self.obs_Name2DimNumber = mydict
 
-    def _render_setplotparams(self, dictname, plottypes = None, colors = None, radius = None):
+    def _render_setplotparams(self, dictname, plottypes = None, colors = None, radius = None, position = None, plotparams = None):
         params = W.W_dict_kwargs()
         del params['dictname']
+        if dictname == "action" and position is None:
+            position = np.array([0.1, 0.1])
+            position = np.repeat(position[np.newaxis,:], len(params['plottypes']), axis = 0)
         for i in range(len(params['plottypes'])):
-            params['radius'][i] = params['radius'][i] * self.metadata_render['window_size']
+            if params['radius'] is not None:
+                params['radius'][i] = params['radius'][i] * self.metadata_render['window_size']
+            if params['position'] is not None:
+                params['position'][i] = params['position'][i] * self.metadata_render['window_size']
         self.plot_params.update({dictname: params})
         
     def set_text(self, attr, str):
@@ -230,6 +252,7 @@ class W_Gym(W_Gym_render):
     metadata_stage = {'stage_names':None, 'stage_timings': None, 'stage_advanceuponaction': None}
     last_reward = 0
     last_action = None
+    last_stage = None
     # action_immediateadvance = None
     def __init__(self, n_maxTrials = np.Inf, \
                     n_maxTrialsPerBlock = np.Inf, n_maxBlocks = np.Inf, \
@@ -289,6 +312,7 @@ class W_Gym(W_Gym_render):
         self.is_effective_action = self.check_isvalidaction(action, self.effective_actions)
         # record current choice
         self.last_action = action
+        self.last_stage = self.stage
         # get consequences of actions
         if not is_error and hasattr(self, '_step'):    
             tR_ext, tR_int = self._step(action)
@@ -381,14 +405,15 @@ class W_Gym(W_Gym_render):
     def setW_reward(self, **kwarg):
         W.W_dict_updateonly(self.Rewards, kwarg)
 
-    def setW_stage(self, stage_names, stage_timings = None, \
+    def setW_stage(self, stage_names, stage_timings_user = None, \
                    stage_advanceuponaction = None):
         if self.is_ITI and not "ITI" in stage_names:
             stage_names.append("ITI")
         self.metadata_stage['stage_names'] = stage_names
         nstage = len(self.metadata_stage['stage_names'])
-        if stage_timings is None:
-            stage_timings = np.ones(nstage) * self.dt    
+        stage_timings = np.ones(nstage) * self.dt           
+        if stage_timings_user is not None:
+            stage_timings[np.arange(0, len(stage_timings_user))] = stage_timings_user
         # if stage_advanceuponaction is None:
         #     stage_advanceuponaction = "ITI"
         # elif not "ITI" in stage_advanceuponaction and "ITI" in self.metadata_stage['stage_names']:
