@@ -6,6 +6,7 @@ W_Env/task_Horizon.py
 W_Env/task_Temporal_Discounting.py
 W_Env/task_TwoStep.py
 W_Env/task_TwoStep_Confidence.py
+W_Env/task_TwoStep_simple.py
 W_Env_CognitiveTasks.egg-info/PKG-INFO
 W_Env_CognitiveTasks.egg-info/SOURCES.txt
 W_Env_CognitiveTasks.egg-info/dependency_links.txt
