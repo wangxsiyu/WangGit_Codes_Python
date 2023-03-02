@@ -1,7 +1,7 @@
 import setuptools
 
 setuptools.setup(
-    name='W_Env',
+    name='W_Env_CognitiveTasks',
     version = '0.0.0',
     description='siyu''s environments',
     author='Siyu Wang',

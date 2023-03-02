@@ -52,9 +52,10 @@ class W_Gym_render(gym.Env):
             tcol = params['colors'][ci]
             tplottype = params['plottypes'][ci]
             tradius = params['radius'][ci]
+            tpos = None
             if params['position'] is not None:
                 tpos = params['position'][ci]
-            else:
+            if tpos is None:
                 tpos = np.array(self.window.get_size()) * [0.5,0.5]
             tval = data[ci]
             if np.any(tval > 0): # show
@@ -75,6 +76,8 @@ class W_Gym_render(gym.Env):
     def _render_frame_action(self, canvas, *arg, **kwarg):
         if self.plot_params['action']['plottypes'] == ['binary']:
             canvas = self._render_frame_binarychoice(canvas, np.array(self.plot_params['action']['plotparams']) == self.last_action)
+        elif self.plot_params['action']['plottypes'] == ["arrows"]:
+            canvas = self._render_frame_arrowchoice(canvas, np.array(self.plot_params['action']['plotparams']) == self.last_action)
         else:
             canvas = self._render_frame_1D(canvas, W.enlist(self.last_action), 'action')
         return canvas
@@ -85,6 +88,18 @@ class W_Gym_render(gym.Env):
             self._render_draw(canvas, 'square', (255,0,0), np.array(self.window.get_size()) * [0.1,0.5], tradius)
         if action[1]:
             self._render_draw(canvas, 'square', (255,0,0), np.array(self.window.get_size()) * [0.9,0.5], tradius)
+        return canvas
+
+    def _render_frame_arrowchoice(self, canvas, action):
+        tradius = np.array(self.window.get_size()) * [0.05, 0.05]
+        if action[0]:
+            self._render_draw(canvas, 'square', (255,0,0), np.array(self.window.get_size()) * [0.1,0.5], tradius)
+        if action[2]:
+            self._render_draw(canvas, 'square', (255,0,0), np.array(self.window.get_size()) * [0.9,0.5], tradius)
+        if action[1]:
+            self._render_draw(canvas, 'square', (255,0,0), np.array(self.window.get_size()) * [0.5,0.1], tradius)
+        if action[3]:
+            self._render_draw(canvas, 'square', (255,0,0), np.array(self.window.get_size()) * [0.5,0.9], tradius)
         return canvas
     
     def _render_frame_obs(self, canvas, *arg, **kwarg):
@@ -132,7 +147,7 @@ class W_Gym_render(gym.Env):
         for i in range(len(params['plottypes'])):
             if params['radius'] is not None:
                 params['radius'][i] = params['radius'][i] * self.metadata_render['window_size']
-            if params['position'] is not None:
+            if params['position'] is not None and params['position'][i] is not None:
                 params['position'][i] = params['position'][i] * self.metadata_render['window_size']
         self.plot_params.update({dictname: params})
         
@@ -243,7 +258,8 @@ class W_Gym(W_Gym_render):
     is_faltten_obs = True
     info = None
     n_maxTrials = None
-    t = 0 # total time from beginning
+    tot_t = 0
+    t = 0 # total time from beginning of a trial
     timer = 0 # timer
     stage = 0 # task stage
     tot_trials = 0 # total trials from beginning
@@ -254,11 +270,12 @@ class W_Gym(W_Gym_render):
     last_action = None
     last_stage = None
     # action_immediateadvance = None
-    def __init__(self, n_maxTrials = np.Inf, \
+    def __init__(self, n_maxT = np.Inf, n_maxTrials = np.Inf, \
                     n_maxTrialsPerBlock = np.Inf, n_maxBlocks = np.Inf, \
                     is_augment_obs = True, is_faltten_obs = True, \
                     is_ITI = True, **kwarg):
         super().__init__(**kwarg)
+        self.n_maxT = n_maxT
         self.n_maxTrials = n_maxTrials
         self.is_augment_obs = is_augment_obs
         self.is_faltten_obs = is_faltten_obs or self.is_augment_obs
@@ -269,9 +286,18 @@ class W_Gym(W_Gym_render):
         W.W_dict_updateonly(self.metadata_episode, metadata)
         self.setW_stage(["stages"], [np.Inf])
 
+    def _len_observation(self):
+        len = self.observation_space_size()
+        if self.is_augment_obs:
+            len += self._len_actions() + 1
+        return len
+    
+    def _len_actions(self):
+        return self.action_space.n
     # flow
     def reset(self, return_info = False):
         self.tot_trials = 0
+        self.tot_t = 0
         if hasattr(self, '_reset'):
             self._reset()
         self.reset_block()
@@ -302,6 +328,7 @@ class W_Gym(W_Gym_render):
         reward_E = 0
         reward_I = 0
         # advance time
+        self.tot_t += self.dt
         self.t = self.t + self.dt
         self.timer = self.timer + self.dt
         if hasattr(self, "_action_transform"):
@@ -341,6 +368,9 @@ class W_Gym(W_Gym_render):
             reward_I += tR_int
         else: 
             is_done = False
+
+        if self.tot_t >= self.n_maxT:
+            is_done = True
         # get consequences of actions (after)
         if not is_error and hasattr(self, '_step_after'):    
             tR_ext, tR_int = self._step_after(action)

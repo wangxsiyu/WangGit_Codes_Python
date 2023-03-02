@@ -52,9 +52,10 @@ class W_Gym_render(gym.Env):
             tcol = params['colors'][ci]
             tplottype = params['plottypes'][ci]
             tradius = params['radius'][ci]
+            tpos = None
             if params['position'] is not None:
                 tpos = params['position'][ci]
-            else:
+            if tpos is None:
                 tpos = np.array(self.window.get_size()) * [0.5,0.5]
             tval = data[ci]
             if np.any(tval > 0): # show
@@ -75,6 +76,8 @@ class W_Gym_render(gym.Env):
     def _render_frame_action(self, canvas, *arg, **kwarg):
         if self.plot_params['action']['plottypes'] == ['binary']:
             canvas = self._render_frame_binarychoice(canvas, np.array(self.plot_params['action']['plotparams']) == self.last_action)
+        elif self.plot_params['action']['plottypes'] == ["arrows"]:
+            canvas = self._render_frame_arrowchoice(canvas, np.array(self.plot_params['action']['plotparams']) == self.last_action)
         else:
             canvas = self._render_frame_1D(canvas, W.enlist(self.last_action), 'action')
         return canvas
@@ -85,6 +88,18 @@ class W_Gym_render(gym.Env):
             self._render_draw(canvas, 'square', (255,0,0), np.array(self.window.get_size()) * [0.1,0.5], tradius)
         if action[1]:
             self._render_draw(canvas, 'square', (255,0,0), np.array(self.window.get_size()) * [0.9,0.5], tradius)
+        return canvas
+
+    def _render_frame_arrowchoice(self, canvas, action):
+        tradius = np.array(self.window.get_size()) * [0.05, 0.05]
+        if action[0]:
+            self._render_draw(canvas, 'square', (255,0,0), np.array(self.window.get_size()) * [0.1,0.5], tradius)
+        if action[2]:
+            self._render_draw(canvas, 'square', (255,0,0), np.array(self.window.get_size()) * [0.9,0.5], tradius)
+        if action[1]:
+            self._render_draw(canvas, 'square', (255,0,0), np.array(self.window.get_size()) * [0.5,0.1], tradius)
+        if action[3]:
+            self._render_draw(canvas, 'square', (255,0,0), np.array(self.window.get_size()) * [0.5,0.9], tradius)
         return canvas
     
     def _render_frame_obs(self, canvas, *arg, **kwarg):
@@ -132,7 +147,7 @@ class W_Gym_render(gym.Env):
         for i in range(len(params['plottypes'])):
             if params['radius'] is not None:
                 params['radius'][i] = params['radius'][i] * self.metadata_render['window_size']
-            if params['position'] is not None:
+            if params['position'] is not None and params['position'][i] is not None:
                 params['position'][i] = params['position'][i] * self.metadata_render['window_size']
         self.plot_params.update({dictname: params})
         

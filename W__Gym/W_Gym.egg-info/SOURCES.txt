@@ -7,4 +7,5 @@ W_Gym.egg-info/PKG-INFO
 W_Gym.egg-info/SOURCES.txt
 W_Gym.egg-info/dependency_links.txt
 W_Gym.egg-info/not-zip-safe
+W_Gym.egg-info/requires.txt
 W_Gym.egg-info/top_level.txt

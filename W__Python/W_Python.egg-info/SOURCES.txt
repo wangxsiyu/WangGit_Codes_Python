@@ -5,4 +5,5 @@ W_Python.egg-info/PKG-INFO
 W_Python.egg-info/SOURCES.txt
 W_Python.egg-info/dependency_links.txt
 W_Python.egg-info/not-zip-safe
+W_Python.egg-info/requires.txt
 W_Python.egg-info/top_level.txt

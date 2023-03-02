@@ -7,6 +7,6 @@ setuptools.setup(
     author='Siyu Wang',
     author_email='wangxsiyu@gmail.com',
     packages = setuptools.find_packages(),
-    install_requires =[],
+    install_requires =['gym','numpy','pygame'],
     zip_safe=False
 )

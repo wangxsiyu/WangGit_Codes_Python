@@ -1,0 +1,13 @@
+setup.py
+W_Env/W_Env.py
+W_Env/__init__.py
+W_Env/task_Goal_Action.py
+W_Env/task_Horizon.py
+W_Env/task_Temporal_Discounting.py
+W_Env/task_TwoStep.py
+W_Env/task_TwoStep_Confidence.py
+W_Env_CognitiveTasks.egg-info/PKG-INFO
+W_Env_CognitiveTasks.egg-info/SOURCES.txt
+W_Env_CognitiveTasks.egg-info/dependency_links.txt
+W_Env_CognitiveTasks.egg-info/not-zip-safe
+W_Env_CognitiveTasks.egg-info/top_level.txt
