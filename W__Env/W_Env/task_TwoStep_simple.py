@@ -10,14 +10,14 @@ class task_TwoStep_simple(W_Gym):
         super().__init__(*arg, **kwarg)
         self.observation_space = spaces.Discrete(3)
         # set action space
-        self.action_space = spaces.Discrete(3) # fix, L, R
+        self.action_space = spaces.Discrete(2) # fix, L, R
         # set rendering dimension names
         self.setup_obs_Name2DimNumber({'planet0':0, 'planet1':1, 'planet2':2})
         # set stages
         stage_names = ["stage1", "stage2"]
         stage_advanceuponaction = ["stage1", "stage2"]
         self.setW_stage(stage_names = stage_names, stage_advanceuponaction = stage_advanceuponaction)
-        self.effective_actions = [1, 2]
+        self.effective_actions = [0,1]
 
     def _setup_render(self):
         plottypes = ["circle", "circle", "circle"]
@@ -25,7 +25,7 @@ class task_TwoStep_simple(W_Gym):
         radius = [0.25, 0.25, 0.25]
         self._render_setplotparams('obs', plottypes, colors, radius)
         plottypes = ["binary"]
-        self._render_setplotparams('action', plottypes, plotparams = [1,2])
+        self._render_setplotparams('action', plottypes, plotparams = [0,1])
 
     def _reset_block(self):
         self.high_state = np.random.choice(2,1)[0]
@@ -62,9 +62,9 @@ class task_TwoStep_simple(W_Gym):
         if self.metadata_stage['stage_names'][self.stage] in ["fixation"]:
             self.valid_actions = [0]
         elif self.metadata_stage['stage_names'][self.stage] in ["stage1"]:
-            self.valid_actions = [1,2]
+            self.valid_actions = [0,1]
         elif self.metadata_stage['stage_names'][self.stage] in ["stage2"]:
-            self.valid_actions = [0]
+            self.valid_actions = [0,1]
 
     def _draw_obs(self):
         self.info = [self.trial_counter, self.t]

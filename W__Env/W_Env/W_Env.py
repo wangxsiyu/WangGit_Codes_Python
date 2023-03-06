@@ -45,6 +45,8 @@ class W_Env_player():
             player.set_keys(keys = ['space', 'a'], actions = [0,1])
         if self.envname in ["Horizon", "TwoStep", "TwoStep_simple"]:
             player.set_keys(keys = ['space', 'left', 'right'], actions = [0,1,2])
+        if self.envname in ["TwoStep_simple"]:
+            player.set_keys(keys = ['left', 'right'], actions = [0,1])
         if self.envname in ["TwoStep_Confidence"]:
             player.set_keys(keys = ['space', 'left', 'right', 'up'], actions = [0,1,2,3])
         self.player = player
