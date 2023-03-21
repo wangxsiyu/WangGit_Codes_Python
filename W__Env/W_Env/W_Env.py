@@ -4,10 +4,11 @@ from W_Env.task_Horizon import task_Horizon
 from W_Env.task_TwoStep import task_TwoStep
 from W_Env.task_TwoStep_Confidence import task_TwoStep_Confidence
 from W_Env.task_TwoStep_simple import task_TwoStep_simple
+from W_Env.task_TwoStep_1frame import task_TwoStep_1frame
 from W_Gym.W_Gym_simulator import W_env_simulator
 
 def W_Env(envname, *arg, **kwarg):
-    envnames  = ["MC", "WV", "Horizon", "TwoStep", "TwoStep_Confidence","TwoStep_simple"]
+    envnames  = ["MC", "WV", "Horizon", "TwoStep", "TwoStep_Confidence","TwoStep_simple","TwoStep_1frame"]
     fullnames = ["task_Goal_Action", "task_Temporal_Discounting", "task_Horizon", 'task_TwoStep', 'task_TwoStep_Confidence']
     if not envname in envnames:
         raise Exception("env not defined")
@@ -23,6 +24,8 @@ def W_Env(envname, *arg, **kwarg):
         env = task_TwoStep_Confidence(*arg, **kwarg)
     if envname == "TwoStep_simple":
         env = task_TwoStep_simple(*arg, **kwarg)
+    if envname == "TwoStep_1frame":
+        env = task_TwoStep_1frame(*arg, **kwarg)
     return env
 
 class W_Env_player():
@@ -42,10 +45,10 @@ class W_Env_player():
         if self.envname == "MC":
             player.set_keys(keys = ['space', 'left', 'up', 'right','down'], actions = [0,1,2,3,4])
         if self.envname == "WV":
-            player.set_keys(keys = ['space', 'a'], actions = [0,1])
+            player.set_keys(keys = ['space', 'a','b'], actions = [0,1,2])
         if self.envname in ["Horizon", "TwoStep", "TwoStep_simple"]:
             player.set_keys(keys = ['space', 'left', 'right'], actions = [0,1,2])
-        if self.envname in ["TwoStep_simple"]:
+        if self.envname in ["TwoStep_1frame"]:
             player.set_keys(keys = ['left', 'right'], actions = [0,1])
         if self.envname in ["TwoStep_Confidence"]:
             player.set_keys(keys = ['space', 'left', 'right', 'up'], actions = [0,1,2,3])

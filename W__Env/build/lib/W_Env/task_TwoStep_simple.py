@@ -4,10 +4,10 @@ from W_Python import W_tools as W
 import numpy as np
 
 class task_TwoStep_simple(W_Gym):
-    task_param = {'p_switch': 0, 'p_trans':[0.8, 0.8], 'p_reward_high': 1, 'p_reward_low': 0}
+    task_param = {'p_switch': 0.05, 'p_trans':[1,1], 'p_reward_high': 1, 'p_reward_low': 0}
     high_state = None
     def __init__(self, *arg, **kwarg):
-        super().__init__(*arg, **kwarg)
+        super().__init__(is_ITI=False, *arg, **kwarg)
         self.observation_space = spaces.Discrete(3)
         # set action space
         self.action_space = spaces.Discrete(3) # fix, L, R
@@ -17,7 +17,7 @@ class task_TwoStep_simple(W_Gym):
         stage_names = ["stage1", "stage2"]
         stage_advanceuponaction = ["stage1", "stage2"]
         self.setW_stage(stage_names = stage_names, stage_advanceuponaction = stage_advanceuponaction)
-        self.effective_actions = [1, 2]
+        self.effective_actions = [1,2]
 
     def _setup_render(self):
         plottypes = ["circle", "circle", "circle"]
@@ -53,24 +53,20 @@ class task_TwoStep_simple(W_Gym):
         R_ext = 0
         R_int = 0
         if self.metadata_stage['stage_names'][self.stage] == "stage1" and self.is_effective_action:
-            self.planet = self.param_trial['transition'][action -1]
+            self.planet = self.param_trial['transition'][action-1]
         if self.metadata_stage['stage_names'][self.stage] == "stage2":
             R_ext = self.param_trial['reward'][self.planet]
         return R_ext, R_int
     
     def _step_set_validactions(self):
-        if self.metadata_stage['stage_names'][self.stage] in ["fixation"]:
-            self.valid_actions = [0]
-        elif self.metadata_stage['stage_names'][self.stage] in ["stage1"]:
+        if self.metadata_stage['stage_names'][self.stage] in ["stage1"]:
             self.valid_actions = [1,2]
         elif self.metadata_stage['stage_names'][self.stage] in ["stage2"]:
             self.valid_actions = [0]
 
     def _draw_obs(self):
         self.info = [self.trial_counter, self.t]
-        if self.metadata_stage['stage_names'][self.stage] == "fixation":
-            self.draw("fixation",1)
-        elif self.metadata_stage['stage_names'][self.stage] == "stage1":
+        if self.metadata_stage['stage_names'][self.stage] == "stage1":
             self.draw('planet0', 1)
         elif self.metadata_stage['stage_names'][self.stage] == "stage2":
             if self.planet == 0:

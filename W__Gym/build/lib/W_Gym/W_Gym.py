@@ -258,7 +258,8 @@ class W_Gym(W_Gym_render):
     is_faltten_obs = True
     info = None
     n_maxTrials = None
-    t = 0 # total time from beginning
+    tot_t = 0
+    t = 0 # total time from beginning of a trial
     timer = 0 # timer
     stage = 0 # task stage
     tot_trials = 0 # total trials from beginning
@@ -269,11 +270,12 @@ class W_Gym(W_Gym_render):
     last_action = None
     last_stage = None
     # action_immediateadvance = None
-    def __init__(self, n_maxTrials = np.Inf, \
+    def __init__(self, n_maxT = np.Inf, n_maxTrials = np.Inf, \
                     n_maxTrialsPerBlock = np.Inf, n_maxBlocks = np.Inf, \
                     is_augment_obs = True, is_faltten_obs = True, \
                     is_ITI = True, **kwarg):
         super().__init__(**kwarg)
+        self.n_maxT = n_maxT
         self.n_maxTrials = n_maxTrials
         self.is_augment_obs = is_augment_obs
         self.is_faltten_obs = is_faltten_obs or self.is_augment_obs
@@ -284,9 +286,18 @@ class W_Gym(W_Gym_render):
         W.W_dict_updateonly(self.metadata_episode, metadata)
         self.setW_stage(["stages"], [np.Inf])
 
+    def _len_observation(self):
+        len = self.observation_space_size()
+        if self.is_augment_obs:
+            len += self._len_actions() + 1
+        return len
+    
+    def _len_actions(self):
+        return self.action_space.n
     # flow
     def reset(self, return_info = False):
         self.tot_trials = 0
+        self.tot_t = 0
         if hasattr(self, '_reset'):
             self._reset()
         self.reset_block()
@@ -317,6 +328,7 @@ class W_Gym(W_Gym_render):
         reward_E = 0
         reward_I = 0
         # advance time
+        self.tot_t += self.dt
         self.t = self.t + self.dt
         self.timer = self.timer + self.dt
         if hasattr(self, "_action_transform"):
@@ -356,6 +368,9 @@ class W_Gym(W_Gym_render):
             reward_I += tR_int
         else: 
             is_done = False
+
+        if self.tot_t >= self.n_maxT:
+            is_done = True
         # get consequences of actions (after)
         if not is_error and hasattr(self, '_step_after'):    
             tR_ext, tR_int = self._step_after(action)
@@ -373,7 +388,7 @@ class W_Gym(W_Gym_render):
         
         obs = self._get_obs()
         info = self._get_info()
-        return obs, self.last_reward, is_done, None, info
+        return obs, self.last_reward, is_done, self.tot_t, info
     
 
     def find_stage(self, stagename):

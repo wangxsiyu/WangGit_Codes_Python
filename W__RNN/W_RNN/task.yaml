@@ -1,0 +1,21 @@
+run-title: ITC
+seed: 0806
+save-path: model
+save-interval: 10_000
+resume: false
+
+task:
+  train-episodes: 10_000
+  trials-per-epi: 100
+  test-episodes: 500
+
+a2c:
+  mem-units: 128
+  
+  value-loss-weight: 0.05
+  entropy-loss-weight: 0.1
+  max-grad-norm: 999.
+  
+  gamma: 0.8
+  lr: 7.e-4
+  weight-decay: 0

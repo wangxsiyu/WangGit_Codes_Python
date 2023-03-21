@@ -8,7 +8,7 @@ class task_Temporal_Discounting(W_Gym):
         super().__init__(*arg, **kwarg)
         self.observation_space = spaces.Discrete(13) # 1 + 9 + 1 + 1 + 1
         # set action space
-        self.action_space = spaces.Discrete(2) # fix, release
+        self.action_space = spaces.Discrete(3) # fix, release, hold
         # set rendering dimension names
         self.setup_obs_Name2DimNumber({'fixation':0, \
                                        'image':np.arange(1,10).tolist(), 'red':10, 'purple':11, \
@@ -21,18 +21,18 @@ class task_Temporal_Discounting(W_Gym):
         self.effective_actions = [1]
 
     def _step_set_validactions(self):
-        if self.metadata_stage['stage_names'][self.stage] in ["fixation", "image"]:
+        if self.metadata_stage['stage_names'][self.stage] in ["fixation", "image","green"]:
             self.valid_actions = [0]
-        else:
-            self.valid_actions = None
+        elif self.metadata_stage['stage_names'][self.stage] in ["red", "purple"]:
+            self.valid_actions = [1,2]
 
     def _setup_render(self):
         plottypes = ["circle", "image", "square", "square", "square"]
         colors = [(255,255,255), (0,0,0), (255, 0, 0), (255, 0, 255), (0,255,0)]
         radius = [0.02, 0.1, 0.04, 0.04, 0.04]
         self._render_setplotparams('obs', plottypes, colors, radius)
-        plottypes = ["binary"]
-        plotparams = [1,2]
+        plottypes = ["arrows"]
+        plotparams = [1,0,2,-1]
         self._render_setplotparams('action', plottypes, plotparams = plotparams)
 
     def _reset_trial(self):
@@ -50,9 +50,9 @@ class task_Temporal_Discounting(W_Gym):
         R_int = 0
         # register pos choice 1 and choice 2
         if self.trial_choice is None:
-            if self.metadata_stage['stage_names'][self.stage] in ["red"] and action != 0:
+            if self.metadata_stage['stage_names'][self.stage] in ["red"] and action == 1:
                 self.trial_choice = "reject"
-            elif self.metadata_stage['stage_names'][self.stage] in ["purple"] and action != 0: 
+            elif self.metadata_stage['stage_names'][self.stage] in ["purple"] and action == 1: 
                 self.trial_choice = "accept"
         if self.metadata_stage['stage_names'][self.stage] == "image":    
             sid = self.find_stage('green')

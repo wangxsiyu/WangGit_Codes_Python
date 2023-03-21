@@ -388,7 +388,7 @@ class W_Gym(W_Gym_render):
         
         obs = self._get_obs()
         info = self._get_info()
-        return obs, self.last_reward, is_done, None, info
+        return obs, self.last_reward, is_done, self.tot_t, info
     
 
     def find_stage(self, stagename):

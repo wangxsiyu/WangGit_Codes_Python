@@ -1,0 +1,12 @@
+setup.py
+W_RNN/W_RNN.py
+W_RNN/W_RNN_Gates.py
+W_RNN/W_Trainer.py
+W_RNN/W_Worker.py
+W_RNN/__init__.py
+W_RNN.egg-info/PKG-INFO
+W_RNN.egg-info/SOURCES.txt
+W_RNN.egg-info/dependency_links.txt
+W_RNN.egg-info/not-zip-safe
+W_RNN.egg-info/requires.txt
+W_RNN.egg-info/top_level.txt
