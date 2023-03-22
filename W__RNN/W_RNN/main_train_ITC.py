@@ -34,7 +34,7 @@ def mytrain(config, device, seed_idx, position_tqdm):
     optim = dict(name = 'RMSprop', lr  = config['a2c']['lr'])
     wk = W_Trainer(env, model, loss, optim, capacity = 1000, mode_sample = "last", \
                    device = device, gradientclipping=config['a2c']['max-grad-norm'], seed = tseed, position_tqdm = position_tqdm)
-    wk.train(2000, batch_size = 32, save_path= out_path, save_interval= 200)
+    wk.train(5000, batch_size = 16, save_path= out_path, save_interval= 500)
 
 
 
