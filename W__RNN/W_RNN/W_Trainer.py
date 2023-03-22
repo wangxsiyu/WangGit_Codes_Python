@@ -51,8 +51,8 @@ class W_loss:
 
         loss_actor = policy_loss - self.params['coef_entropyloss'] * entropy_reg
         loss_critic = self.params['coef_valueloss'] * value_loss  
-        return loss_actor + loss_critic
-
+        loss = loss_actor + loss_critic
+        return loss
 
 class W_Trainer(W_Worker): 
     # env
