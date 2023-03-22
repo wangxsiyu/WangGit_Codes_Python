@@ -27,7 +27,7 @@ class W_Gym_render(gym.Env):
         self.setup_rendermode()
         if hasattr(self, '_setup_render'):
             self._setup_render()
-        print(f"render mode: {self.metadata_render['render_mode']}")
+        # print(f"render mode: {self.metadata_render['render_mode']}")
 
     # draw obs
     def draw(self, channelname, val):

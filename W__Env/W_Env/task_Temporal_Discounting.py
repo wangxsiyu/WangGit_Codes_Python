@@ -15,10 +15,10 @@ class task_Temporal_Discounting(W_Gym):
                                         'green':12})
         # set stages
         stage_names = ["fixation", "image", "red", \
-                       "purple", "purple_overtime", "green","ITI"]
+                       "purple", "purple_overtime", "green"]
         stage_advanceuponaction = ["red", "purple"]
         self.setW_stage(stage_names = stage_names, stage_advanceuponaction = stage_advanceuponaction, \
-                        stage_timings_user= [1,1,1,1,1,999,2])
+                        stage_timings_user= [1,1,1,1,1,999])
         self.effective_actions = [1]
 
     def _step_set_validactions(self):

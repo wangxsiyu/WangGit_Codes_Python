@@ -52,6 +52,9 @@ class W_loss:
         loss_actor = policy_loss - self.params['coef_entropyloss'] * entropy_reg
         loss_critic = self.params['coef_valueloss'] * value_loss  
         loss = loss_actor + loss_critic
+
+        # if torch.isinf(loss):
+        #     print('check')
         return loss
 
 class W_Trainer(W_Worker): 
@@ -61,18 +64,27 @@ class W_Trainer(W_Worker):
     # logger
     # optimizer
     # device (for training)
-    def __init__(self, env, model, param_loss, param_optim, logger = None, device = None, gradientclipping = None, *arg, **kwarg):
+    def __init__(self, env, model, param_loss, param_optim, logger = None, device = None, gradientclipping = None, \
+                 seed = None, position_tqdm = 0, *arg, **kwarg):
         super().__init__(env, model, device=device, *arg, **kwarg)
         if device is None:
             self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
             print(f"enabling {self.device}")
         else:
             self.device = device
+        if seed is not None:    
+            torch.manual_seed(seed)
+            np.random.seed(seed)
+            torch.random.manual_seed(seed)
+            self.seed = seed
+        else:
+            self.seed = 0
         self.set_mode(mode_worker = "train")
         self.loss = W_loss(param_loss, device = device)
         self.set_optim(param_optim)
         self.logger = logger
         self.gradientclipping = gradientclipping
+        self.position_tqdm = position_tqdm
 
     def set_optim(self, param_optim):
         params = list(self.model.parameters())
@@ -84,7 +96,7 @@ class W_Trainer(W_Worker):
         if save_path is not None:
             save_path = save_path + "_{epi:04d}"
         total_rewards = np.zeros(max_episodes)
-        progress = tqdm(range(0, max_episodes))
+        progress = tqdm(range(0, max_episodes), position = self.position_tqdm)
         reward = self.run_worker(batch_size)
         for episode in progress:
             # W.W_tic()
@@ -109,7 +121,7 @@ class W_Trainer(W_Worker):
                     'last_episode': episode,
                 }, save_path.format(epi=episode+1) + ".pt")
 
-            progress.set_description(f"Episode {episode+1}/{max_episodes} | \
+            progress.set_description(f"Seed {self.seed}, Episode {episode+1}/{max_episodes} | \
                                       Reward: {reward:.3f} | mean Reward: {avg_reward_smooth:.3f} | Loss: {loss.item():.3f}")
             
             if is_online:
