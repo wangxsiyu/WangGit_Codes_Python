@@ -116,11 +116,11 @@ class W_Worker:
         return tb(action_dist, val_estimate, action_likelihood)
 
     def run_worker(self, nrep = 1):
-        W.W_tic()
+        # W.W_tic()
         rs = []
         for _ in range(nrep):
             r = self.run_episode()
             rs.append(r)
-        W.W_toc("worker time = ")
+        # W.W_toc("worker time = ")
         return np.mean(rs)
 

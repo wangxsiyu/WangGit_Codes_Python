@@ -7,7 +7,7 @@ from W_Env.W_Env import W_Env
 
 render_mode = None
 n_maxT = 100
-env = W_Env("TwoStep_1frame", render_mode = render_mode, \
+env = W_Env("WV", render_mode = render_mode, \
                         n_maxT = n_maxT)
 parser = argparse.ArgumentParser(description="parameters")
 parser.add_argument('-c','--config', type = str, default = 'task.yaml')
@@ -27,6 +27,4 @@ loss = dict(name = 'A2C', params = dict(gamma = config['a2c']['gamma'], \
                                         coef_entropyloss = config['a2c']['entropy-loss-weight']))
 optim = dict(name = 'RMSprop', lr  = config['a2c']['lr'])
 wk = W_Trainer(env, model, loss, optim, capacity = 1000, mode_sample = "last", device = device)
-wk.train(10000, batch_size=32)
-# wk.train(30000
-# , save_path='./md/model_WV', save_interval= 1000)
+wk.train(10000, batch_size = 32, save_path='./md1/model_WV', save_interval= 1000)

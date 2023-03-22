@@ -80,14 +80,14 @@ class W_Trainer(W_Worker):
         if param_optim['name'] == "RMSprop":
             self.optimizer = torch.optim.RMSprop(params, lr = param_optim['lr'])
 
-    def train(self, max_episodes, batch_size, is_online = True, save_path = None, save_interval = 1000):
+    def train(self, max_episodes, batch_size, is_online = True, save_path = None, save_interval = 1000, smooth_interval = 10):
         if save_path is not None:
             save_path = save_path + "_{epi:04d}"
         total_rewards = np.zeros(max_episodes)
         progress = tqdm(range(0, max_episodes))
         reward = self.run_worker(batch_size)
         for episode in progress:
-            W.W_tic()
+            # W.W_tic()
             buffer = self.memory.sample(batch_size)
             trainingbuffer = self.run_episode_outputlayer(buffer)
             self.optimizer.zero_grad()
@@ -96,21 +96,21 @@ class W_Trainer(W_Worker):
             if self.gradientclipping is not None:
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.gradientclipping)
             self.optimizer.step()
-            W.W_toc("update time = ")
+            # W.W_toc("update time = ")
             
             total_rewards[episode] = reward
 
-            avg_reward_100 = total_rewards[max(0, episode-100):(episode+1)].mean()
+            avg_reward_smooth = total_rewards[max(0, episode-smooth_interval):(episode+1)].mean()
 
             if save_path is not None and (episode+1) % save_interval == 0:
                 torch.save({
                     "state_dict": self.model.state_dict(),
-                    "avg_reward_100": avg_reward_100,
+                    "avg_reward_smooth": avg_reward_smooth,
                     'last_episode': episode,
                 }, save_path.format(epi=episode+1) + ".pt")
 
             progress.set_description(f"Episode {episode+1}/{max_episodes} | \
-                                      Reward: {reward} | mean Reward: {avg_reward_100:.4f} | Loss: {loss.item():.4f}")
+                                      Reward: {reward:.3f} | mean Reward: {avg_reward_smooth:.3f} | Loss: {loss.item():.3f}")
             
             if is_online:
                 reward = self.run_worker(batch_size)
