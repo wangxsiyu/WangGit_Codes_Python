@@ -1,4 +1,4 @@
-from W_Worker import W_Worker, Data_Episode_Tuple_Train
+from W_Worker import W_Worker
 import torch
 import numpy as np
 from tqdm import tqdm 
@@ -13,44 +13,38 @@ class W_loss:
         if self.loss_name == "A2C":
             return self.loss_A2C(*arg, **kwarg)        
 
-    def loss_A2C(self, buffer):
+    def loss_A2C(self, buffer, trainingbuffer):
         gamma = self.params['gamma']
+        (_, _, reward, _, done) = buffer
+        (action_dist, value, action_likelihood) = trainingbuffer
         # bootstrap discounted returns with final value estimates
-        nstep = len(buffer)
-        returns = 0
-        advantages = 0
-        last_value = 0
-        all_returns = torch.zeros(nstep)
-        all_advantages = torch.zeros(nstep)
+        nbatch = done.shape[0]
+        nstep = done.shape[1]
+        returns = torch.zeros((nbatch,))
+        advantages = torch.zeros((nbatch,))
+        last_value = torch.zeros((nbatch,))
+        all_returns = torch.zeros((nbatch, nstep))
+        all_advantages = torch.zeros((nbatch, nstep))
         # run Generalized Advantage Estimation, calculate returns, advantages
         for t in reversed(range(nstep)):
-            # ('state', 'action', 'reward', 'timestep', 'done', 'action_dist', 'value')
-            _, _, reward, _, done, _, value = buffer[t]
-            mask = 1 - done
-            reward = float(reward)
-            returns = reward + returns * gamma * mask
-            deltas = reward + last_value * gamma * mask - value.data
+            mask = 1 - done[:,t]
+            returns = reward[:,t] + returns * gamma * mask
+            deltas = reward[:,t] + last_value * gamma * mask - value[:,t].data
             
             advantages = advantages * gamma * mask + deltas
 
-            all_returns[t] = returns 
-            all_advantages[t] = advantages
-            last_value = value.data
+            all_returns[:,t] = returns 
+            all_advantages[:,t] = advantages
+            last_value = value[:,t].data
 
-        batch = Data_Episode_Tuple_Train(*zip(*buffer))
+        logll = torch.log(action_likelihood)
+        policy_loss = -(logll * all_advantages).mean()
+        value_loss = 0.5 * (all_returns - value).pow(2).mean()
+        entropy_reg = -(action_dist * torch.log(action_dist)).mean()
 
-        action_prob = torch.cat(batch.action_prob, dim = 1).squeeze()
-        action = torch.cat(batch.action, dim = 0)
-        values = torch.tensor(batch.value)
-
-        logits = (action_prob * action).sum(1)
-        policy_loss = -(torch.log(logits) * all_advantages).mean()
-        value_loss = 0.5 * (all_returns - values).pow(2).mean()
-        entropy_reg = -(action_prob * torch.log(action_prob)).mean()
-
-        loss = self.params['coef_valueloss'] * value_loss + policy_loss - self.params['coef_entropyloss'] * entropy_reg
-
-        return loss 
+        loss_actor = policy_loss - self.params['coef_entropyloss'] * entropy_reg
+        loss_critic = self.params['coef_valueloss'] * value_loss  
+        return loss_actor + loss_critic
 
 
 class W_Trainer(W_Worker): 
@@ -60,27 +54,33 @@ class W_Trainer(W_Worker):
     # logger
     # optimizer
     # device (for training)
-    def __init__(self, env, model, param_loss, param_optim, logger = None, gradientclipping = None):
-        super().__init__(env, model, mode = "train")
+    def __init__(self, env, model, param_loss, param_optim, logger = None, gradientclipping = None, *arg, **kwarg):
+        super().__init__(env, model, *arg, **kwarg)
+        self.set_mode(mode_worker = "train")
         self.loss = W_loss(param_loss)
         self.set_optim(param_optim)
         self.logger = logger
         self.gradientclipping = gradientclipping
 
     def set_optim(self, param_optim):
+        params = list(self.model.parameters())
+        params += list(self.model.init0)
         if param_optim['name'] == "RMSprop":
-            self.optimizer = torch.optim.RMSprop(self.model.parameters(), lr = param_optim['lr'])
+            self.optimizer = torch.optim.RMSprop(params, lr = param_optim['lr'])
 
-    def train(self, max_episodes, save_path = None, save_interval = 1000):
+    def train(self, max_episodes, batch_size, save_path = None, save_interval = 1000):
         if save_path is not None:
             save_path = save_path + "_{epi:04d}"
         total_rewards = np.zeros(max_episodes)
         progress = tqdm(range(0, max_episodes))
+        self.run_worker(batch_size)
         for episode in progress:
             reward = self.run_episode()
-            buffer = self.memory.get_last()
+            buffer = self.memory.sample(batch_size)
+            
+            trainingbuffer = self.run_episode_outputlayer(buffer)
             self.optimizer.zero_grad()
-            loss = self.loss.loss(buffer)
+            loss = self.loss.loss(buffer, trainingbuffer)
             loss.backward()
             if self.gradientclipping is not None:
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.gradientclipping)
