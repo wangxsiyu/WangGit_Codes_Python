@@ -2,9 +2,15 @@ import torch
 from collections import namedtuple 
 import numpy as np
 import random
+from W_Python import W_tools as W
 
 class W_Buffer:
-    def __init__(self, tuple, capacity = np.Inf, mode_sample = "random", *arg, **kwarg):
+    def __init__(self, tuple, capacity = np.Inf, mode_sample = "random", device = None, *arg, **kwarg):
+        if device is None:
+            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            print(f"enabling {self.device}")
+        else:
+            self.device = device
         self.memory = []
         self.tuple = tuple
         self.capacity = capacity
@@ -42,16 +48,21 @@ class W_Buffer:
             d = self.get_random(n)
         d = self.tuple(*zip(*d))
         d = [np.stack(x) for x in d]
-        d = [torch.from_numpy(x).float() for x in d]
+        d = [torch.from_numpy(x).float().to(self.device) for x in d]
         d = self.tuple(*d)
         return d
 
 class W_Worker:
-    def __init__(self, env, model, *arg, **kwarg):
+    def __init__(self, env, model, device = None, *arg, **kwarg):
+        if device is None:
+            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            print(f"enabling {self.device}")
+        else:
+            self.device = device
         self.env = env
         self.model = model
         Memory = namedtuple('Memory', ('obs', 'action', 'reward', 'timestep', 'done'))
-        self.memory = W_Buffer(Memory, *arg, **kwarg)
+        self.memory = W_Buffer(Memory, device = device, *arg, **kwarg)
         # self.set_mode(*arg, **kwarg)
 
     def set_mode(self, mode_worker = "Test"):
@@ -73,15 +84,15 @@ class W_Worker:
         while not done:
             # take actions
             obs = torch.from_numpy(obs).unsqueeze(0).float()
-            action_dist, val_estimate, mem_state_new = self.model(obs.unsqueeze(0), mem_state)
+            action_dist, val_estimate, mem_state_new = self.model(obs.unsqueeze(0).to(self.device), mem_state)
             action = self.select_action(action_dist, mode_action)
 
-            obs_new, reward, done, timestep, _ = self.env.step(action)
+            obs_new, reward, done, timestep, _ = self.env.step(action.item())
             reward = float(reward)
             action_onehot = torch.nn.functional.one_hot(action, self.env.action_space.n)
             action_onehot = action_onehot.unsqueeze(0).float()
             
-            self.memory.add(obs, action_onehot, [reward], [timestep], [done])
+            self.memory.add(obs.to('cpu').numpy(), action_onehot.to('cpu').numpy(), [reward], [timestep], [done])
             
             obs = obs_new
             mem_state = mem_state_new
@@ -92,9 +103,10 @@ class W_Worker:
 
     def run_episode_outputlayer(self, buffer):
         self.model.train()
-        (obs, action, reward, timestep, done) = buffer
+        (obs, action, _,_,_) = buffer
+        action = action.to(self.device)
         mem_state = None
-        action_dist, val_estimate, mem_state = self.model(obs, mem_state)
+        action_dist, val_estimate, mem_state = self.model(obs.to(self.device), mem_state)
         action_dist = action_dist.permute((1,0,2))
         eps = 1e-5
         action_dist = action_dist.clamp(eps, 1-eps)
@@ -104,10 +116,11 @@ class W_Worker:
         return tb(action_dist, val_estimate, action_likelihood)
 
     def run_worker(self, nrep = 1):
+        W.W_tic()
         rs = []
         for _ in range(nrep):
             r = self.run_episode()
             rs.append(r)
+        W.W_toc("worker time = ")
         return np.mean(rs)
-        
 

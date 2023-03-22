@@ -1,4 +1,16 @@
+import time
 import numpy as np
+
+def W_tic():
+    global W_tic_toc_time
+    W_tic_toc_time = time.time()
+
+def W_toc(str = "elapse time is "):
+    global W_tic_toc_time
+    elapsetime =  time.time() - W_tic_toc_time
+    print(f"{str} {elapsetime}")
+    return elapsetime
+
 def W_dict_deleteNone(**kwargs):
     res = dict((k,v) for k,v in kwargs.items() if v is not None)
     return res

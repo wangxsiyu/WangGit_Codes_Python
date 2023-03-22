@@ -2,8 +2,13 @@ import torch
 import torch.nn as nn
 
 class W_RNN(nn.Module):
-    def __init__(self, input_len, hidden_len, gatetype = "vanilla", inittype = None):
+    def __init__(self, input_len, hidden_len, gatetype = "vanilla", inittype = None, device = None):
         super().__init__()
+        if device is None:
+            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            print(f"enabling {self.device}")
+        else:
+            self.device = device
         self.makeRNN(gatetype, input_len, hidden_len)
         self.initParamsRNN(gatetype, inittype)
 
@@ -12,17 +17,18 @@ class W_RNN(nn.Module):
             self.RNN = nn.LSTM(input_len, hidden_len)  
         if gatetype == "vanilla":
             self.RNN = nn.RNN(input_len, hidden_len, nonlinearity = 'relu')  
-    
+        self.RNN.to(self.device)
+
     def initParamsRNN(self, gatetype, inittype):
         if gatetype == "LSTM":
-            self.h0 = torch.randn(self.RNN.hidden_size).float()
-            self.c0 = torch.randn(self.RNN.hidden_size).float()
-            self.h0.requires_grad = True
-            self.c0.requires_grad = True
+            h0 = torch.randn(self.RNN.hidden_size, requires_grad = True).float().to(self.device)
+            c0 = torch.randn(self.RNN.hidden_size, requires_grad = True).float().to(self.device)
+            self.h0 = nn.Parameter(h0)
+            self.c0 = nn.Parameter(c0)
             self.init0 = [self.h0, self.c0]
         if gatetype == "vanilla":
-            self.h0 = torch.randn(self.RNN.hidden_size).float()
-            self.h0.requires_grad = True
+            h0 = torch.randn(self.RNN.hidden_size, requires_grad = True).float().to(self.device)
+            self.h0 = nn.Parameter(h0)
             self.init0 = [self.h0]
 
     def get_h0_c0(self, batch_size = 1):
@@ -34,10 +40,10 @@ class W_RNN(nn.Module):
         return x
 
 class W_RNN_Head_ActorCritic(W_RNN):
-    def __init__(self, input_len, hidden_len, action_len, gatetype = "vanilla", inittype = None):
-        super().__init__(input_len, hidden_len, gatetype, inittype)
-        self.actor = nn.Linear(hidden_len, action_len)
-        self.critic = nn.Linear(hidden_len, 1)
+    def __init__(self, input_len, hidden_len, action_len, gatetype = "vanilla", inittype = None, device = None):
+        super().__init__(input_len, hidden_len, gatetype, inittype, device = device)
+        self.actor = nn.Linear(hidden_len, action_len).to(self.device)
+        self.critic = nn.Linear(hidden_len, 1).to(self.device)
         self.initParamsRNNHeadA2C(inittype)
     
     def initParamsRNNHeadA2C(self, inittype):

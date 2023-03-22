@@ -16,13 +16,17 @@ args = parser.parse_args()
 with open(args.config, 'r', encoding="utf-8") as fin:
     config = yaml.load(fin, Loader=yaml.FullLoader)
 
+# device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = "cpu"
+device = torch.device(device)
+print(f"enabling {device}")
 model = W_RNN_Head_ActorCritic(env.observation_space_size() + env.action_space.n + 1,\
-                           config['a2c']['mem-units'],env.action_space.n,'vanilla')
+                           config['a2c']['mem-units'],env.action_space.n,'vanilla',device = device)
 loss = dict(name = 'A2C', params = dict(gamma = config['a2c']['gamma'], \
                                         coef_valueloss = config['a2c']['value-loss-weight'], \
                                         coef_entropyloss = config['a2c']['entropy-loss-weight']))
 optim = dict(name = 'RMSprop', lr  = config['a2c']['lr'])
-wk = W_Trainer(env, model, loss, optim, capacity = 100, mode_sample = "last")
-wk.train(10000, batch_size=1)
+wk = W_Trainer(env, model, loss, optim, capacity = 1000, mode_sample = "last", device = device)
+wk.train(10000, batch_size=32)
 # wk.train(30000
 # , save_path='./md/model_WV', save_interval= 1000)
