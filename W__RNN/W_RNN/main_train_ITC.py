@@ -5,9 +5,12 @@ import yaml
 import argparse
 from W_Env.W_Env import W_Env
 import numpy as np
-from multiprocessing import Process
+from multiprocessing import Process, Pool, freeze_support, RLock
+from multiprocessing.pool import ThreadPool
 
-def mytrain(config, device, seed_idx, position_tqdm):
+def mytrain(device, seed_idx, position_tqdm):
+    with open('task.yaml', 'r', encoding="utf-8") as fin:
+        config = yaml.load(fin, Loader=yaml.FullLoader)
     render_mode = None
     n_maxT = 100
     env = W_Env("WV", render_mode = render_mode, \
@@ -15,7 +18,7 @@ def mytrain(config, device, seed_idx, position_tqdm):
     tseed = 1995 * seed_idx
     tlt = "v" + f"_{seed_idx}"
     import os
-    exp_path = os.path.join("md2", tlt)
+    exp_path = os.path.join("md3", tlt)
     if not os.path.isdir(exp_path): 
         os.mkdir(exp_path)
     # print("running" + f"_{seed_idx}")
@@ -27,7 +30,7 @@ def mytrain(config, device, seed_idx, position_tqdm):
         yaml.dump(config, fout)
 
     model = W_RNN_Head_ActorCritic(env.observation_space_size() + env.action_space.n + 1,\
-                            config['a2c']['mem-units'],env.action_space.n,'vanilla',noise_scale = noise_scale, device = device)
+                            config['a2c']['mem-units'],env.action_space.n,'noise',noise_scale = noise_scale, device = device)
     loss = dict(name = 'A2C', params = dict(gamma = config['a2c']['gamma'], \
                                             coef_valueloss = config['a2c']['value-loss-weight'], \
                                             coef_entropyloss = config['a2c']['entropy-loss-weight']))
@@ -41,26 +44,34 @@ def mytrain(config, device, seed_idx, position_tqdm):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="parameters")
-    parser.add_argument('-c','--config', type = str, default = 'task.yaml')
-    args = parser.parse_args()
-
-    with open(args.config, 'r', encoding="utf-8") as fin:
-        config = yaml.load(fin, Loader=yaml.FullLoader)
+    # parser = argparse.ArgumentParser(description="parameters")
+    # parser.add_argument('-c','--config', type = str, default = 'task.yaml')
+    # args = parser.parse_args()
 
     # device = 'cuda' if torch.cuda.is_available() else 'cpu'
     device = "cpu"
     device = torch.device(device)
     print(f"enabling {device}")
 
+
+
     # mytrain(config, device, 1,0)
     n_seeds = 8
-    proc = []
-    for seed_idx in range(1, n_seeds + 1):
-        p = Process(target = mytrain, args = (config, device, seed_idx, seed_idx))
-        p.start()
-        proc.append(p)
 
-    for p in proc:
-        p.join()
+    p = ThreadPool(n_seeds)
+    for seed_idx in range(n_seeds):
+        p.apply_async(mytrain, args = (device, seed_idx, seed_idx))
+    p.close()
+    p.join()
+
+    # proc = []
+    # for seed_idx in range(1, n_seeds + 1):
+
+    #     p = Process(target = mytrain, args = (device, seed_idx, seed_idx))
+    #     p.start()
+    #     proc.append(p)
+
+    # for p in proc:
+    #     p.join()
+
 

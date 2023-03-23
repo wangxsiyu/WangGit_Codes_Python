@@ -96,7 +96,7 @@ class W_Trainer(W_Worker):
         if save_path is not None:
             save_path = save_path + "_{epi:04d}"
         total_rewards = np.zeros(max_episodes)
-        progress = tqdm(range(0, max_episodes), position = self.position_tqdm)
+        progress = tqdm(range(0, max_episodes), position = self.position_tqdm, leave=True)
         reward = self.run_worker(batch_size)
         for episode in progress:
             # W.W_tic()
@@ -107,6 +107,7 @@ class W_Trainer(W_Worker):
             loss.backward()
             if self.gradientclipping is not None:
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.gradientclipping)
+                
             self.optimizer.step()
             # W.W_toc("update time = ")
             
@@ -121,10 +122,11 @@ class W_Trainer(W_Worker):
                     'last_episode': episode,
                 }, save_path.format(epi=episode+1) + ".pt")
 
-            progress.set_description(f"Seed {self.seed}, Episode {episode+1}/{max_episodes} | \
-                                      Reward: {reward:.3f} | mean Reward: {avg_reward_smooth:.3f} | Loss: {loss.item():.3f}")
-            
+            progress.set_description(f"Process {self.position_tqdm}, Episode {episode+1}/{max_episodes}")
+            progress.set_postfix({'Reward': f"{reward:.3f}", 'mean Reward': f"{avg_reward_smooth:.3f}", 'Loss': f"{loss.item():.3f}"})
+            progress.update()
             if is_online:
                 reward = self.run_worker(batch_size)
+
             else:
                 reward = self.run_worker(1)

@@ -19,7 +19,7 @@ with open('task.yaml', 'r', encoding="utf-8") as fin:
 device = torch.device("cpu")
 model = W_RNN_Head_ActorCritic(env.observation_space_size() + env.action_space.n + 1,\
                            config['a2c']['mem-units'],env.action_space.n,'vanilla',device = device)
-modeldata = torch.load('./md2/v_5/train_iter_0500.pt')
+modeldata = torch.load('./md2/v_5/train_iter_5000.pt')
 model.load_state_dict(modeldata['state_dict'])
 wk = W_Worker(env, model, capacity = 1000,device = device)
 

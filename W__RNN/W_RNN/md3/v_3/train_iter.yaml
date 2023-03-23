@@ -1,0 +1,18 @@
+a2c:
+  entropy-loss-weight: 0.1
+  gamma: 0.8
+  lr: 0.0007
+  max-grad-norm: 999.0
+  mem-units: 128
+  value-loss-weight: 0.05
+  weight-decay: 0
+noise_scale: 0
+resume: false
+run-title: ITC
+save-interval: 10000
+save-path: model
+seed: 0806
+task:
+  test-episodes: 500
+  train-episodes: 10000
+  trials-per-epi: 100
