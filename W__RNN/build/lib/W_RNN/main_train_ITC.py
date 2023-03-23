@@ -5,10 +5,17 @@ import yaml
 import argparse
 from W_Env.W_Env import W_Env
 import numpy as np
-from multiprocessing import Process, Pool, freeze_support, RLock
-from multiprocessing.pool import ThreadPool
+# from concurrent.futures import ProcessPoolExecutor
+from multiprocessing import Process, Pool, freeze_support, RLock, Lock
+# from multiprocessing.pool import ThreadPool
+import tqdm
 
-def mytrain(device, seed_idx, position_tqdm):
+def mytrain(seed_idx, write_lock):
+    # tqdm.set_lock(write_lock)
+    device = "cpu"
+    device = torch.device(device)
+    print(f"enabling {device}")
+    position_tqdm = seed_idx
     with open('task.yaml', 'r', encoding="utf-8") as fin:
         config = yaml.load(fin, Loader=yaml.FullLoader)
     render_mode = None
@@ -30,7 +37,7 @@ def mytrain(device, seed_idx, position_tqdm):
         yaml.dump(config, fout)
 
     model = W_RNN_Head_ActorCritic(env.observation_space_size() + env.action_space.n + 1,\
-                            config['a2c']['mem-units'],env.action_space.n,'noise',noise_scale = noise_scale, device = device)
+                            config['a2c']['mem-units'],env.action_space.n,'vanilla',noise_scale = noise_scale, device = device)
     loss = dict(name = 'A2C', params = dict(gamma = config['a2c']['gamma'], \
                                             coef_valueloss = config['a2c']['value-loss-weight'], \
                                             coef_entropyloss = config['a2c']['entropy-loss-weight']))
@@ -49,29 +56,30 @@ if __name__ == "__main__":
     # args = parser.parse_args()
 
     # device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    device = "cpu"
-    device = torch.device(device)
-    print(f"enabling {device}")
 
+    freeze_support()
 
+    n_seeds = 8
+    write_lock = Lock()
+
+    # with ProcessPoolExecutor(max_workers=n_seeds) as executor:
+    #     executor.map(mytrain, range(n_seeds))
 
     # mytrain(config, device, 1,0)
-    n_seeds = 8
+    # mytrain(0)
+    # p = Pool(n_seeds)
+    # for seed_idx in range(n_seeds):
+    #     p.apply_async(mytrain, seed_idx)
+    # p.close()
+    # p.join()
 
-    p = ThreadPool(n_seeds)
-    for seed_idx in range(n_seeds):
-        p.apply_async(mytrain, args = (device, seed_idx, seed_idx))
-    p.close()
-    p.join()
+    proc = []
+    for seed_idx in range(1, n_seeds + 1):
+        p = Process(target = mytrain, args = (seed_idx, write_lock))
+        p.start()
+        proc.append(p)
 
-    # proc = []
-    # for seed_idx in range(1, n_seeds + 1):
-
-    #     p = Process(target = mytrain, args = (device, seed_idx, seed_idx))
-    #     p.start()
-    #     proc.append(p)
-
-    # for p in proc:
-    #     p.join()
+    for p in proc:
+        p.join()
 
 

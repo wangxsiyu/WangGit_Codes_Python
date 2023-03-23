@@ -1,7 +1,8 @@
-from W_Worker import W_Worker
+from W_RNN.W_Worker import W_Worker
 import torch
 import numpy as np
 from tqdm import tqdm 
+# from parallelbar import progress_map as tqdm
 from W_Python import W_tools as W
 
 class W_loss:
@@ -53,8 +54,8 @@ class W_loss:
         loss_critic = self.params['coef_valueloss'] * value_loss  
         loss = loss_actor + loss_critic
 
-        # if torch.isinf(loss):
-        #     print('check')
+        if torch.isinf(loss):
+            print('check')
         return loss
 
 class W_Trainer(W_Worker): 
@@ -96,9 +97,17 @@ class W_Trainer(W_Worker):
         if save_path is not None:
             save_path = save_path + "_{epi:04d}"
         total_rewards = np.zeros(max_episodes)
+        total_rewards_smooth = np.zeros(max_episodes)
+        total_episodelength = np.zeros(max_episodes)
+        total_episodelength_smooth = np.zeros(max_episodes)
+        total_rewardrate = np.zeros(max_episodes)
+        total_rewardrate_smooth = np.zeros(max_episodes)
         progress = tqdm(range(0, max_episodes), position = self.position_tqdm, leave=True)
+        self.progressbar = progress
         reward = self.run_worker(batch_size)
         for episode in progress:
+            if hasattr(self, '_train_special'):
+                self._train_special(episode, total_rewards, total_rewards_smooth)
             # W.W_tic()
             buffer = self.memory.sample(batch_size)
             trainingbuffer = self.run_episode_outputlayer(buffer)
@@ -112,19 +121,20 @@ class W_Trainer(W_Worker):
             # W.W_toc("update time = ")
             
             total_rewards[episode] = reward
-
-            avg_reward_smooth = total_rewards[max(0, episode-smooth_interval):(episode+1)].mean()
-
+            total_rewards_smooth[episode] = total_rewards[max(0, episode-smooth_interval):(episode+1)].mean()
+            total_episodelength[episode] = len(self.memory.memory[-1].reward)
+            total_episodelength_smooth[episode] = total_episodelength[max(0, episode-smooth_interval):(episode+1)].mean()
+            total_rewardrate[episode] = reward/total_episodelength[episode]
+            total_rewardrate_smooth[episode] = total_rewardrate[max(0, episode-smooth_interval):(episode+1)].mean()
             if save_path is not None and (episode+1) % save_interval == 0:
                 torch.save({
                     "state_dict": self.model.state_dict(),
-                    "avg_reward_smooth": avg_reward_smooth,
+                    "avg_reward_smooth": total_rewards_smooth,
                     'last_episode': episode,
                 }, save_path.format(epi=episode+1) + ".pt")
 
-            progress.set_description(f"Process {self.position_tqdm}, Episode {episode+1}/{max_episodes}")
-            progress.set_postfix({'Reward': f"{reward:.3f}", 'mean Reward': f"{avg_reward_smooth:.3f}", 'Loss': f"{loss.item():.3f}"})
-            progress.update()
+            progress.set_description(f"Process {self.position_tqdm}, Episode {episode+1}/{max_episodes}, Reward {reward:.2f}, avR {total_rewards_smooth[episode]:.2f}, Loss {loss.item():.2f}, len {total_episodelength_smooth[episode]:.1f}, rate {total_rewardrate_smooth[episode]:.2f}")
+            # progress.update()
             if is_online:
                 reward = self.run_worker(batch_size)
 
