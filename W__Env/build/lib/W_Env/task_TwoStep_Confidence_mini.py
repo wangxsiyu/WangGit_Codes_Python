@@ -4,7 +4,7 @@ from W_Python import W_tools as W
 import numpy as np
 
 class task_TwoStep_Confidence_mini(W_Gym):
-    task_param = {'p_switch': 0.05, 'p_reward_high': 0.9, 'p_reward_low': 0.1, 'reward_safe': 0.1}
+    task_param = {'p_switch': 0.05, 'reward_safe': 0.1}
     high_state = None
     def __init__(self, *arg, **kwarg):
         super().__init__(is_ITI = False, *arg, **kwarg)
@@ -30,6 +30,10 @@ class task_TwoStep_Confidence_mini(W_Gym):
         p = np.max((p, 1-p))
         self.task_param['p_trans'] = [p,p]
         self.high_state = np.random.choice(2,1)[0]
+        p = np.random.rand()
+        p = np.max((p, 1-p))
+        self.task_param['p_reward_high'] = p
+        self.task_param['p_reward_low'] = 1-p
 
     def _reset_trial(self):
         if np.random.rand() < self.task_param['p_switch']:
