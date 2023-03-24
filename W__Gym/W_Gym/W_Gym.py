@@ -78,6 +78,8 @@ class W_Gym_render(gym.Env):
             canvas = self._render_frame_binarychoice(canvas, np.array(self.plot_params['action']['plotparams']) == self.last_action)
         elif self.plot_params['action']['plottypes'] == ["arrows"]:
             canvas = self._render_frame_arrowchoice(canvas, np.array(self.plot_params['action']['plotparams']) == self.last_action)
+        elif self.plot_params['action']['plottypes'] == ["arrowsplus"]:
+            canvas = self._render_frame_arrowchoice(canvas, np.array(self.plot_params['action']['plotparams']) == self.last_action)
         else:
             canvas = self._render_frame_1D(canvas, W.enlist(self.last_action), 'action')
         return canvas
@@ -100,6 +102,8 @@ class W_Gym_render(gym.Env):
             self._render_draw(canvas, 'square', (255,0,0), np.array(self.window.get_size()) * [0.5,0.1], tradius)
         if action[3]:
             self._render_draw(canvas, 'square', (255,0,0), np.array(self.window.get_size()) * [0.5,0.9], tradius)
+        if len(action) > 4 and action[4]:
+            self._render_draw(canvas, 'square', (255,0,0), np.array(self.window.get_size()) * [0.5,0.5], tradius)    
         return canvas
     
     def _render_frame_obs(self, canvas, *arg, **kwarg):
