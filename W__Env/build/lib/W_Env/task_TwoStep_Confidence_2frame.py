@@ -3,7 +3,7 @@ from W_Gym.W_Gym import W_Gym
 from W_Python import W_tools as W
 import numpy as np
 
-class task_TwoStep_Confidence_mini(W_Gym):
+class task_TwoStep_Confidence_2frame(W_Gym):
     task_param = {'p_switch': 0.05, 'reward_safe': 0.1}
     high_state = None
     def __init__(self, *arg, **kwarg):
@@ -19,21 +19,21 @@ class task_TwoStep_Confidence_mini(W_Gym):
                                        'question_shuttle':6, 'question_planet':7, 'question_reward':8,\
                                        })
         # set stages
-        stage_names = ["stage1", "guessplanet", "stage2"]
-        stage_advanceuponaction = ["stage1", "guessplanet", "stage2"]
+        stage_names = ["stage1", "stage2"]
+        stage_advanceuponaction = ["stage1", "stage2"]
         self.setW_stage(stage_names = stage_names, stage_advanceuponaction = stage_advanceuponaction)
 
         self.display_reward = 0
 
     def _reset_block(self):
-        # p = np.random.rand()
-        # p = np.max((p, 1-p))
-        p = 0.9
+        p = np.random.rand()
+        p = np.max((p, 1-p))
+        # p = 0.9
         self.task_param['p_trans'] = [p,p]
         self.high_state = np.random.choice(2,1)[0]
-        # p = np.random.rand()
+        p = np.random.rand()
         # p = np.max((p, 1-p))
-        p = 0.9
+        # p = 0.9
         self.task_param['p_reward_high'] = p
         self.task_param['p_reward_low'] = 1-p
 

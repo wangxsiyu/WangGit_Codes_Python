@@ -26,12 +26,14 @@ class task_TwoStep_Confidence_mini(W_Gym):
         self.display_reward = 0
 
     def _reset_block(self):
-        p = np.random.rand()
-        p = np.max((p, 1-p))
+        # p = np.random.rand()
+        # p = np.max((p, 1-p))
+        p = 0.9
         self.task_param['p_trans'] = [p,p]
         self.high_state = np.random.choice(2,1)[0]
-        p = np.random.rand()
-        p = np.max((p, 1-p))
+        # p = np.random.rand()
+        # p = np.max((p, 1-p))
+        p = 0.9
         self.task_param['p_reward_high'] = p
         self.task_param['p_reward_low'] = 1-p
 

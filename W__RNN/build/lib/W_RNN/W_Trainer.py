@@ -92,8 +92,9 @@ class W_Trainer(W_Worker):
         # params += list(self.model.init0)
         if param_optim['name'] == "RMSprop":
             self.optimizer = torch.optim.RMSprop(params, lr = param_optim['lr'])
-
-    def train(self, max_episodes, batch_size, is_online = True, save_path = None, save_interval = 1000, smooth_interval = 10):
+    
+    def train(self, max_episodes, batch_size, is_online = True, save_path = None, \
+              save_interval = 1000, smooth_interval = 100, last_episode = 0):
         if save_path is not None:
             save_path = save_path + "_{epi:04d}"
         total_rewards = np.zeros(max_episodes)
@@ -102,7 +103,7 @@ class W_Trainer(W_Worker):
         total_episodelength_smooth = np.zeros(max_episodes)
         total_rewardrate = np.zeros(max_episodes)
         total_rewardrate_smooth = np.zeros(max_episodes)
-        progress = tqdm(range(0, max_episodes), position = self.position_tqdm, leave=True)
+        progress = tqdm(range(last_episode, max_episodes), position = self.position_tqdm, leave=True)
         self.progressbar = progress
         reward = self.run_worker(batch_size)
         for episode in progress:

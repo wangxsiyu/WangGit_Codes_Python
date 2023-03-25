@@ -7,6 +7,7 @@ W_Env/task_Temporal_Discounting.py
 W_Env/task_TwoStep.py
 W_Env/task_TwoStep_1frame.py
 W_Env/task_TwoStep_Confidence.py
+W_Env/task_TwoStep_Confidence_2frame.py
 W_Env/task_TwoStep_Confidence_mini.py
 W_Env/task_TwoStep_simple.py
 W_Env/test.py
