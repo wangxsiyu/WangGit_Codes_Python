@@ -6,12 +6,15 @@ import numpy as np
 class task_TwoStep_Confidence_2frame(W_Gym):
     task_param = {'p_switch': 0.025, 'reward_safe': 0.1}
     high_state = None
-    def __init__(self, *arg, **kwarg):
+    is_fixed = False
+    def __init__(self, is_fixed = False, is_flip_ptrans = False, *arg, **kwarg):
         super().__init__(is_ITI = False, *arg, **kwarg)
+
         self.observation_space = spaces.Discrete(9)
         # set action space
         self.action_space = spaces.Discrete(5) # shuttle1,2, planet 1,2, takereward
-
+        self.is_flip_ptrans = is_flip_ptrans
+        self.is_fixed = is_fixed
         # set rendering dimension names
         self.setup_obs_Name2DimNumber({'planet0':0, 'planet1':1, 'planet2':2,\
                                        'shuttle1':3, 'shuttle2':4, \
@@ -24,18 +27,26 @@ class task_TwoStep_Confidence_2frame(W_Gym):
         self.setW_stage(stage_names = stage_names, stage_advanceuponaction = stage_advanceuponaction)
 
         self.display_reward = 0
+        print(f"fix:{self.is_fixed}, flip:{self.is_flip_ptrans}")
 
     def _reset_block(self):
-        # p = np.random.rand()
-        # p = np.max((p, 1-p))
-        p = 0.9
-        if np.random.rand() < 0.5:
+        if self.is_fixed:
+            p = 0.9 
+        else:
+            p = np.random.choice(6,1)[0]/10 + 0.5
+            # p = np.random.rand()
+            # p = np.max((p, 1-p))
+        if self.is_flip_ptrans and np.random.rand() < 0.5:
             p = 1 - p
         self.task_param['p_trans'] = [p,p]
         self.high_state = np.random.choice(2,1)[0]
-        # p = np.random.rand()
-        # p = np.max((p, 1-p))
-        p = 0.9
+        if self.is_fixed:
+            p = 0.9
+        else:
+            # p = np.random.rand()
+            # p = np.max((p, 1-p))
+            p = np.random.choice(6,1)[0]/10 + 0.5
+        # print(f"phigh:{p}")
         self.task_param['p_reward_high'] = p
         self.task_param['p_reward_low'] = 1-p
 

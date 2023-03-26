@@ -122,11 +122,11 @@ class W_Trainer(W_Worker):
             # W.W_toc("update time = ")
             
             total_rewards[episode] = reward
-            total_rewards_smooth[episode] = total_rewards[max(0, episode-smooth_interval):(episode+1)].mean()
+            total_rewards_smooth[episode] = total_rewards[max(last_episode, episode-smooth_interval):(episode+1)].mean()
             total_episodelength[episode] = len(self.memory.memory[-1].reward)
-            total_episodelength_smooth[episode] = total_episodelength[max(0, episode-smooth_interval):(episode+1)].mean()
+            total_episodelength_smooth[episode] = total_episodelength[max(last_episode, episode-smooth_interval):(episode+1)].mean()
             total_rewardrate[episode] = reward/total_episodelength[episode]
-            total_rewardrate_smooth[episode] = total_rewardrate[max(0, episode-smooth_interval):(episode+1)].mean()
+            total_rewardrate_smooth[episode] = total_rewardrate[max(last_episode, episode-smooth_interval):(episode+1)].mean()
             if save_path is not None and (episode+1) % save_interval == 0:
                 torch.save({
                     "state_dict": self.model.state_dict(),
