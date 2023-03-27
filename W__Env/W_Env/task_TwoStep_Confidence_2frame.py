@@ -31,22 +31,25 @@ class task_TwoStep_Confidence_2frame(W_Gym):
         print(f"fix:{self.is_fixed}, flip:{self.is_flip_ptrans}")
 
     def _reset_block(self):
-        if self.is_fixed[0] != 0:
+        if self.is_fixed[0] == 1:
             p = 0.9 
-        else:
+        elif self.is_fixed[0] == 2:
             p = np.random.choice(5,1)[0]/10 + 0.6
-            # p = np.random.rand()
-            # p = np.max((p, 1-p))
+        else:
+            p = np.random.rand()
+            p = np.max((p, 1-p))
         if self.is_flip_ptrans and np.random.rand() < 0.5:
             p = 1 - p
         self.task_param['p_trans'] = [p,p]
         self.high_state = np.random.choice(2,1)[0]
-        if self.is_fixed[1] != 0:
+        if self.is_fixed[1] == 1:
             p = 0.9
-        else:
-            # p = np.random.rand()
-            # p = np.max((p, 1-p))
+        elif self.is_fixed[1] == 2:
             p = np.random.choice(5,1)[0]/10 + 0.6
+        else:
+            p = np.random.rand()
+            p = np.max((p, 1-p))
+            
         # print(f"phigh:{p}")
         self.task_param['p_reward_high'] = p
         self.task_param['p_reward_low'] = 1-p
