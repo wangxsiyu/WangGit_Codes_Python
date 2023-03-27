@@ -68,8 +68,9 @@ class W_Worker:
     def set_mode(self, mode_worker = "Test"):
         self.mode_worker = mode_worker
 
-    def select_action(self, action_dist, mode_action):
+    def select_action(self, action_vector, mode_action):
         if mode_action == "softmax":
+            action_dist = torch.nn.functional.softmax(action_vector, dim = -1)
             action_cat = torch.distributions.Categorical(action_dist.squeeze())
             action = action_cat.sample()
         return action
@@ -84,8 +85,8 @@ class W_Worker:
         while not done:
             # take actions
             obs = torch.from_numpy(obs).unsqueeze(0).float()
-            action_dist, val_estimate, mem_state_new = self.model(obs.unsqueeze(0).to(self.device), mem_state)
-            action = self.select_action(action_dist, mode_action)
+            action_vector, val_estimate, mem_state_new = self.model(obs.unsqueeze(0).to(self.device), mem_state)
+            action = self.select_action(action_vector, mode_action)
 
             obs_new, reward, done, timestep, _ = self.env.step(action.item())
             reward = float(reward)

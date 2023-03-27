@@ -61,9 +61,9 @@ class W_RNN_Head_ActorCritic(W_RNN):
             hidden_state = self.get_h0_c0(batch_size)   
         obs = obs.permute((1,0,2))     
         h, hidden_state = self.RNN(obs, hidden_state)
-        action_dist = torch.nn.functional.softmax(self.actor(h), dim = -1)
+        policy_vector = self.actor(h)
         value = self.critic(h)
-        return action_dist, value, hidden_state
+        return policy_vector, value, hidden_state
     
     def forward(self, *arg, **kwarg):
         if self.training:
