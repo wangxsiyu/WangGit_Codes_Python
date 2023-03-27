@@ -7,7 +7,7 @@ class task_TwoStep_Confidence_2frame(W_Gym):
     task_param = {'p_switch': 0.025, 'reward_safe': 0.1}
     high_state = None
     is_fixed = False
-    def __init__(self, is_fixed = False, is_flip_ptrans = False, *arg, **kwarg):
+    def __init__(self, is_fixed = [0, 0], is_flip_ptrans = False, is_flip = True,  *arg, **kwarg):
         super().__init__(is_ITI = False, *arg, **kwarg)
 
         self.observation_space = spaces.Discrete(9)
@@ -15,6 +15,7 @@ class task_TwoStep_Confidence_2frame(W_Gym):
         self.action_space = spaces.Discrete(5) # shuttle1,2, planet 1,2, takereward
         self.is_flip_ptrans = is_flip_ptrans
         self.is_fixed = is_fixed
+        self.is_flip = is_flip
         # set rendering dimension names
         self.setup_obs_Name2DimNumber({'planet0':0, 'planet1':1, 'planet2':2,\
                                        'shuttle1':3, 'shuttle2':4, \
@@ -30,30 +31,30 @@ class task_TwoStep_Confidence_2frame(W_Gym):
         print(f"fix:{self.is_fixed}, flip:{self.is_flip_ptrans}")
 
     def _reset_block(self):
-        if self.is_fixed:
+        if self.is_fixed[0] != 0:
             p = 0.9 
         else:
-            p = np.random.choice(6,1)[0]/10 + 0.5
+            p = np.random.choice(5,1)[0]/10 + 0.6
             # p = np.random.rand()
             # p = np.max((p, 1-p))
         if self.is_flip_ptrans and np.random.rand() < 0.5:
             p = 1 - p
         self.task_param['p_trans'] = [p,p]
         self.high_state = np.random.choice(2,1)[0]
-        if self.is_fixed:
+        if self.is_fixed[1] != 0:
             p = 0.9
         else:
             # p = np.random.rand()
             # p = np.max((p, 1-p))
-            p = np.random.choice(6,1)[0]/10 + 0.5
+            p = np.random.choice(5,1)[0]/10 + 0.6
         # print(f"phigh:{p}")
         self.task_param['p_reward_high'] = p
         self.task_param['p_reward_low'] = 1-p
 
     def _reset_trial(self):
-        if np.random.rand() < self.task_param['p_switch']: # flip reward
+        if self.is_flip and np.random.rand() < self.task_param['p_switch']: # flip reward
             self.high_state = 1- self.high_state
-        if np.random.rand() < self.task_param['p_switch']: # flip transition
+        if self.is_flip and np.random.rand() < self.task_param['p_switch']: # flip transition
             self.task_param['p_trans'] = [1 - x for x in self.task_param['p_trans']]
         r_high = np.array(np.random.rand() < self.task_param['p_reward_high']).astype(int)
         r_low = np.array(np.random.rand() < self.task_param['p_reward_low']).astype(int)
