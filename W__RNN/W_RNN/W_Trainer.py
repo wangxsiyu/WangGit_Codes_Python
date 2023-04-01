@@ -1,4 +1,5 @@
 from W_RNN.W_Worker import W_Worker
+from W_RNN.W_Logger import W_Logger 
 import torch
 import numpy as np
 from tqdm import tqdm 
@@ -66,7 +67,7 @@ class W_Trainer(W_Worker):
     # optimizer
     # device (for training)
     def __init__(self, env, model, param_loss, param_optim, logger = None, device = None, gradientclipping = None, \
-                 seed = None, position_tqdm = 0, *arg, **kwarg):
+                 seed = None, *arg, **kwarg):
         super().__init__(env, model, device=device, *arg, **kwarg)
         if device is None:
             self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -83,9 +84,11 @@ class W_Trainer(W_Worker):
         self.set_mode(mode_worker = "train")
         self.loss = W_loss(param_loss, device = device)
         self.set_optim(param_optim)
-        self.logger = logger
+        if logger is not None:
+            self.logger = logger
+        else:
+            self.logger = W_Logger()
         self.gradientclipping = gradientclipping
-        self.position_tqdm = position_tqdm
 
     def set_optim(self, param_optim):
         params = list(self.model.parameters())
@@ -93,22 +96,24 @@ class W_Trainer(W_Worker):
         if param_optim['name'] == "RMSprop":
             self.optimizer = torch.optim.RMSprop(params, lr = param_optim['lr'])
     
-    def train(self, max_episodes, batch_size, is_online = True, save_path = None, \
-              save_interval = 1000, smooth_interval = 100, last_episode = 0):
-        if save_path is not None:
-            save_path = save_path + "_{epi:04d}"
-        total_rewards = np.zeros(max_episodes)
-        total_rewards_smooth = np.zeros(max_episodes)
-        total_episodelength = np.zeros(max_episodes)
-        total_episodelength_smooth = np.zeros(max_episodes)
-        total_rewardrate = np.zeros(max_episodes)
-        total_rewardrate_smooth = np.zeros(max_episodes)
-        progress = tqdm(range(last_episode, max_episodes), position = self.position_tqdm, leave=True)
+    def loadlastdict(self, loadname, isresume = False):
+        if loadname is None:
+            return
+        modeldata = torch.load(loadname)
+        self.model.load_state_dict(modeldata['state_dict'])
+        if isresume:
+            self.logger.setlog(modeldata['info'])
+
+    def train(self, max_episodes, batch_size, is_online = True, tqdmpos = 0):
+        self.logger.init(max_episodes)
+        progress = tqdm(range(0, max_episodes), position = tqdmpos, leave=True)
         self.progressbar = progress
         reward = self.run_worker(batch_size)
+        gamelen = len(self.memory.memory[-1].reward)
+        self.logger.update(reward, gamelen)
         for episode in progress:
-            if hasattr(self, '_train_special'):
-                self._train_special(episode, total_rewards, total_rewards_smooth)
+            # if hasattr(self, '_train_special'):
+            #     self._train_special(episode, total_rewards, total_rewards_smooth)
             # W.W_tic()
             buffer = self.memory.sample(batch_size)
             trainingbuffer = self.run_episode_outputlayer(buffer)
@@ -120,24 +125,13 @@ class W_Trainer(W_Worker):
                 
             self.optimizer.step()
             # W.W_toc("update time = ")
-            
-            total_rewards[episode] = reward
-            total_rewards_smooth[episode] = total_rewards[max(last_episode, episode-smooth_interval):(episode+1)].mean()
-            total_episodelength[episode] = len(self.memory.memory[-1].reward)
-            total_episodelength_smooth[episode] = total_episodelength[max(last_episode, episode-smooth_interval):(episode+1)].mean()
-            total_rewardrate[episode] = reward/total_episodelength[episode]
-            total_rewardrate_smooth[episode] = total_rewardrate[max(last_episode, episode-smooth_interval):(episode+1)].mean()
-            if save_path is not None and (episode+1) % save_interval == 0:
-                torch.save({
-                    "state_dict": self.model.state_dict(),
-                    "avg_reward_smooth": total_rewards_smooth,
-                    'last_episode': episode,
-                }, save_path.format(epi=episode+1) + ".pt")
+            self.logger.save(self.model.state_dict())
 
-            progress.set_description(f"Process {self.position_tqdm}, Episode {episode+1}/{max_episodes}, Reward {reward:.2f}, avR {total_rewards_smooth[episode]:.2f}, Loss {loss.item():.2f}, len {total_episodelength_smooth[episode]:.1f}, rate {total_rewardrate_smooth[episode]:.2f}")
+            progress.set_description(f"Process {tqdmpos}, {self.logger.getdescription()}")
             # progress.update()
-            if is_online:
+            if not is_online:
                 reward = self.run_worker(batch_size)
-
             else:
                 reward = self.run_worker(1)
+            gamelen = len(self.memory.memory[-1].reward)
+            self.logger.update(reward, gamelen)

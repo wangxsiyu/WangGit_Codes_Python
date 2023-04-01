@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from W_RNN.W_RNN_Gates import W_RNNgate_noise
+
 class W_RNN(nn.Module):
     def __init__(self, input_len, hidden_len, gatetype = "vanilla", inittype = None, device = None,\
                  *arg, **kwarg):
