@@ -128,7 +128,7 @@ class W_Trainer(W_Worker):
             # W.W_toc("update time = ")
             self.logger.save(self.model.state_dict())
 
-            progress.set_description(f"Process {tqdmpos}, {self.logger.getdescription()}, Loss: {loss.item()}")
+            progress.set_description(f"Process {tqdmpos}, {self.logger.getdescription()}, Loss: {loss.item():.4f}")
             # progress.update()
             if not is_online:
                 reward = self.run_worker(batch_size)
