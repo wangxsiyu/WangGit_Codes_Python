@@ -107,7 +107,8 @@ class W_Worker:
         (obs, action, _,_,_) = buffer
         action = action.to(self.device)
         mem_state = None
-        action_dist, val_estimate, mem_state = self.model(obs.to(self.device), mem_state)
+        action_vector, val_estimate, mem_state = self.model(obs.to(self.device), mem_state)
+        action_dist = torch.nn.functional.softmax(action_vector, dim = -1)
         action_dist = action_dist.permute((1,0,2))
         eps = 1e-4
         action_dist = action_dist.clamp(eps, 1-eps)

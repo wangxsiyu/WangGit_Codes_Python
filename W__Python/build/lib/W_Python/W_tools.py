@@ -1,5 +1,6 @@
 import time
 import numpy as np
+import os
 
 def W_tic():
     global W_tic_toc_time
@@ -38,3 +39,8 @@ def W_dict_updateonly(dict1, dict2):
 
 def W_onehot(x, n):
     return np.squeeze(np.eye(n)[x])
+
+def W_mkdir(folder):
+    if not os.path.exists(folder):
+        os.mkdir(folder)
+    return folder

@@ -302,6 +302,8 @@ class W_Gym(W_Gym_render):
     def reset(self, return_info = False):
         self.tot_trials = 0
         self.tot_t = 0
+        self.last_action = None
+        self.last_reward = 0
         if hasattr(self, '_reset'):
             self._reset()
         self.reset_block()

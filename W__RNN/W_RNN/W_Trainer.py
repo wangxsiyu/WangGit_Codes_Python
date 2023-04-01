@@ -101,6 +101,7 @@ class W_Trainer(W_Worker):
             return
         modeldata = torch.load(loadname)
         self.model.load_state_dict(modeldata['state_dict'])
+        print(f"loaded model {loadname}")
         if isresume:
             self.logger.setlog(modeldata['info'])
 
@@ -127,7 +128,7 @@ class W_Trainer(W_Worker):
             # W.W_toc("update time = ")
             self.logger.save(self.model.state_dict())
 
-            progress.set_description(f"Process {tqdmpos}, {self.logger.getdescription()}")
+            progress.set_description(f"Process {tqdmpos}, {self.logger.getdescription()}, Loss: {loss.item()}")
             # progress.update()
             if not is_online:
                 reward = self.run_worker(batch_size)

@@ -1,4 +1,5 @@
 setup.py
+W_RNN/W_Logger.py
 W_RNN/W_RNN.py
 W_RNN/W_RNN_Gates.py
 W_RNN/W_Trainer.py

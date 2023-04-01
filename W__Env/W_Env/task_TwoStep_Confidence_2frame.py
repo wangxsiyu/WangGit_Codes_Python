@@ -6,7 +6,7 @@ import random
 
 class task_TwoStep_Confidence_2frame(W_Gym):
     task_hyper_param = {'p_switch_reward': 0, 'p_switch_transition': 0, \
-                  'ps_high_state':[1], 'ps_common_trans':[1], \
+                  'ps_high_state':[1], 'ps_low_state':None, 'ps_common_trans':[1], \
                   'is_random_common0': False, \
                   }
     task_param = {}
@@ -15,11 +15,11 @@ class task_TwoStep_Confidence_2frame(W_Gym):
     def __init__(self, *arg, **kwarg):
         super().__init__(is_ITI = False, *arg, **kwarg)
         self.task_hyper_param = W.W_dict_updateonly(self.task_hyper_param, kwarg)
-        self.observation_space = spaces.Discrete(5)
+        self.observation_space = spaces.Discrete(3)
         # set action space
         self.action_space = spaces.Discrete(3) # take reward, shuttle1,2
         # set rendering dimension names
-        self.setup_obs_Name2DimNumber({'planet0':0, 'planet1':1, 'planet2':2, 'stage1': 3, 'stage2': 4})
+        self.setup_obs_Name2DimNumber({'planet0':0, 'planet1':1, 'planet2':2})
         # set stages
         stage_names = ["stage1", "stage2"]
         stage_advanceuponaction = ["stage1", "stage2"]
@@ -32,12 +32,20 @@ class task_TwoStep_Confidence_2frame(W_Gym):
             p = 1 - p
         self.task_param['p_trans'] = [p,p]
         self.high_state = np.random.choice(2,1)[0]
-        p = random.sample(self.task_hyper_param['ps_high_state'], 1)[0]
+
+        tid = np.random.choice(len(self.task_hyper_param['ps_high_state']),1)[0]
+        p = self.task_hyper_param['ps_high_state'][tid]
         # need to implement continuous p
             # p = np.random.rand()
             # p = np.max((p, 1-p))
         self.task_param['p_reward_high'] = p
-        self.task_param['p_reward_low'] = 1-p
+
+        if self.task_hyper_param['ps_low_state'] is None:
+            p = 1-p
+        else:
+            p = self.task_hyper_param['ps_low_state'][tid]
+
+        self.task_param['p_reward_low'] = p
 
     def _reset_trial(self):
         if np.random.rand() < self.task_hyper_param['p_switch_reward']: # flip reward
@@ -77,9 +85,9 @@ class task_TwoStep_Confidence_2frame(W_Gym):
     def _draw_obs(self):
         if self.metadata_stage['stage_names'][self.stage] == "stage1":
             self.draw('planet0', 1)
-            self.draw('stage1', 1)
+            # self.draw('stage1', 1)
         elif self.metadata_stage['stage_names'][self.stage] == "stage2":
-            self.draw('stage2', 1)
+            # self.draw('stage2', 1)
             if self.planet == 0:
                 self.draw('planet1',1)
             elif self.planet == 1:
