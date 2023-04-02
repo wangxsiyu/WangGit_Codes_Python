@@ -118,7 +118,7 @@ class W_Trainer(W_Worker):
             self.logger.last_saved_version = loadname
             isload = True
             if is_resume:
-                self.logger.start_episode = int(re.search("(.*)_(.*).pt", loadname).group(2))
+                self.logger.start_episode = int(re.search("(.*)_(.*).pt", loadname).group(2)) + 1
                 self.logger.setlog(modeldata['training_info'])
         return isload
     
