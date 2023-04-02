@@ -69,8 +69,8 @@ class W_Logger():
     
     def save(self, state_dict):
         if self.save_path is not None:
-            if (self.episode) % self.save_interval == 0:
-                save_path = self.save_path + "_{epi:09d}".format(epi=self.episode) + ".pt"
+            if (self.episode-1) % self.save_interval == 0:
+                save_path = self.save_path + "_{epi:09d}".format(epi=self.episode-1) + ".pt"
                 self.last_saved_version = save_path
                 torch.save({
                     "state_dict": state_dict,
