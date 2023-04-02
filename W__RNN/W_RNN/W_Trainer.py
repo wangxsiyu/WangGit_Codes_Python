@@ -140,7 +140,6 @@ class W_Trainer(W_Worker):
         gamelen = len(self.memory.memory[-1].reward)
         if self.logger.episode == 0:
             self.logger.update(reward, gamelen)
-            progress.set_description(f"Process {tqdmpos}, {self.logger.getdescription()}, Loss: {loss.item():.4f}")
         for episode in progress:
             # if hasattr(self, '_train_special'):
             #     self._train_special(episode, total_rewards, total_rewards_smooth)
@@ -153,7 +152,7 @@ class W_Trainer(W_Worker):
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.gradientclipping)
                 
             self.optimizer.step()
-
+            progress.set_description(f"Process {tqdmpos}, {self.logger.getdescription()}, Loss: {loss.item():.4f}")
 
             if not is_online:
                 reward = self.run_worker(batch_size)
@@ -161,6 +160,5 @@ class W_Trainer(W_Worker):
                 reward = self.run_worker(1)
             gamelen = len(self.memory.memory[-1].reward)
             self.logger.update(reward, gamelen)
-            progress.set_description(f"Process {tqdmpos}, {self.logger.getdescription()}, Loss: {loss.item():.4f}")
 
             self.logger.save(self.model.state_dict())
