@@ -7,6 +7,7 @@ import random
 class task_TwoStep_Confidence_2frame(W_Gym):
     task_hyper_param = {'p_switch_reward': 0, 'p_switch_transition': 0, \
                   'ps_high_state':[1], 'ps_low_state':None, 'ps_common_trans':[1], \
+                  'ps_ambiguity': [0], \
                   'is_random_common0': False, \
                   }
     task_param = {}
@@ -46,6 +47,10 @@ class task_TwoStep_Confidence_2frame(W_Gym):
             p = self.task_hyper_param['ps_low_state'][tid]
 
         self.task_param['p_reward_low'] = p
+
+
+        p = random.sample(self.task_hyper_param['ps_ambiguity'],1)[0]
+        self.task_param['p_ambiguity'] = p
 
     def _reset_trial(self):
         if np.random.rand() < self.task_hyper_param['p_switch_reward']: # flip reward
@@ -88,9 +93,13 @@ class task_TwoStep_Confidence_2frame(W_Gym):
             # self.draw('stage1', 1)
         elif self.metadata_stage['stage_names'][self.stage] == "stage2":
             # self.draw('stage2', 1)
-            if self.planet == 0:
+            if np.random.rand() < self.task_param['p_ambiguity']:
+                planet = np.random.choice(2,1)[0]
+            else:
+                planet = self.planet
+            if planet == 0:
                 self.draw('planet1',1)
-            elif self.planet == 1:
+            elif planet == 1:
                 self.draw('planet2',1)
         self.flip()
 
