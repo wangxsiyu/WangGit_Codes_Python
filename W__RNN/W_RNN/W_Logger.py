@@ -7,9 +7,10 @@ class W_Logger():
     smooth_interval = 100
     last_saved_version = None
     max_episodes = None
+    start_episode = None
     info = None
     def __init__(self):
-        pass
+        self.start_episode = None
         
     def set(self, save_path= './model', save_interval= 100, smooth_interval = 100):
         self.save_path = save_path
@@ -21,20 +22,27 @@ class W_Logger():
             print("warning: info overwriten")
         self.info = info
 
+    def get_start_episode(self):
+        if self.start_episode is None:
+            self.start_episode = 0
+        return self.start_episode
+
     def init(self, max_episodes):
-        self.episode = 0
+        self.episode =  self.get_start_episode()
         self.max_episodes = max_episodes
-        max_episodes += 1
+        nep = max_episodes + 1
+        if self.info is not None and self.info['rewards'].shape[0] < nep:
+            nep -= self.info['rewards'].shape[0]
         info = dict()
-        info['rewards'] = np.zeros(max_episodes)
-        info['rewards_smooth'] = np.zeros(max_episodes)
-        info['episodelength'] = np.zeros(max_episodes)
-        info['episodelength_smooth'] = np.zeros(max_episodes)
-        info['rewardrate'] = np.zeros(max_episodes)
-        info['rewardrate_smooth'] = np.zeros(max_episodes)
+        info['rewards'] = np.zeros(nep)
+        info['rewards_smooth'] = np.zeros(nep)
+        info['episodelength'] = np.zeros(nep)
+        info['episodelength_smooth'] = np.zeros(nep)
+        info['rewardrate'] = np.zeros(nep)
+        info['rewardrate_smooth'] = np.zeros(nep)
         if self.info is None:
             self.info = info
-        else:
+        else:            
             for i in info.keys():
                 self.info[i] = np.hstack((self.info[i], info[i]))
 

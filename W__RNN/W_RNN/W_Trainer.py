@@ -5,6 +5,8 @@ import numpy as np
 from tqdm import tqdm 
 # from parallelbar import progress_map as tqdm
 from W_Python import W_tools as W
+import os
+import re
 
 class W_loss:
     loss_name = None
@@ -96,18 +98,39 @@ class W_Trainer(W_Worker):
         if param_optim['name'] == "RMSprop":
             self.optimizer = torch.optim.RMSprop(params, lr = param_optim['lr'])
     
-    def loadlastdict(self, loadname, isresume = False):
-        if loadname is None:
-            return
-        modeldata = torch.load(loadname)
-        self.model.load_state_dict(modeldata['state_dict'])
-        print(f"loaded model {loadname}")
-        if isresume:
-            self.logger.setlog(modeldata['info'])
+    def loaddict_folder(self, currentfolder, is_resume = True):
+        isload = False
+        file_trained_list = os.listdir(currentfolder)
+        fs = [re.search("(.*)_(.*).pt", x) for x in file_trained_list]
+        fs = [x for x in fs if x is not None]
+        if not len(fs) == 0:
+            its = [x.group(2) for x in fs]
+            tid = np.argmax([int(x) for x in its])
+            isload = self.loaddict(os.path.join(currentfolder, fs[tid].group(0)), is_resume)
+        return isload
+    
+    def loaddict(self, loadname, is_resume = True):
+        isload = False
+        if loadname is not None:
+            modeldata = torch.load(loadname)
+            self.model.load_state_dict(modeldata['state_dict'])
+            print(f"loaded model {loadname}")
+            isload = True
+            if is_resume:
+                self.logger.start_episode = int(re.search("(.*)_(.*).pt", loadname).group(2))
+                self.logger.setlog(modeldata['training_info'])
+        return isload
+    
+    def loaddict_main(self, loadname = None, currentfolder = None, isresume = False):
+        isload = False
+        if currentfolder is not None:
+            isload = self.loaddict_folder(currentfolder, True)
+        if not isload and loadname is not None:
+            isload = self.loaddict(loadname, isresume)
 
     def train(self, max_episodes, batch_size, is_online = True, tqdmpos = 0):
         self.logger.init(max_episodes)
-        progress = tqdm(range(0, max_episodes), position = tqdmpos, leave=True)
+        progress = tqdm(range(self.logger.get_start_episode(), max_episodes+1), position = tqdmpos, leave=True)
         self.progressbar = progress
         reward = self.run_worker(batch_size)
         gamelen = len(self.memory.memory[-1].reward)
