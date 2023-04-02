@@ -115,6 +115,7 @@ class W_Trainer(W_Worker):
             modeldata = torch.load(loadname)
             self.model.load_state_dict(modeldata['state_dict'])
             print(f"loaded model {loadname}")
+            self.logger.last_saved_version = loadname
             isload = True
             if is_resume:
                 self.logger.start_episode = int(re.search("(.*)_(.*).pt", loadname).group(2))
@@ -130,11 +131,15 @@ class W_Trainer(W_Worker):
 
     def train(self, max_episodes, batch_size, is_online = True, tqdmpos = 0):
         self.logger.init(max_episodes)
-        progress = tqdm(range(self.logger.get_start_episode(), max_episodes+1), position = tqdmpos, leave=True)
+        if self.logger.get_start_episode() >= max_episodes:
+            print(f'model already trained: total steps = {max_episodes}, skip')
+            return
+        progress = tqdm(range(self.logger.get_start_episode(), max_episodes), position = tqdmpos, leave=True)
         self.progressbar = progress
         reward = self.run_worker(batch_size)
         gamelen = len(self.memory.memory[-1].reward)
-        self.logger.update(reward, gamelen)
+        if self.logger.episode == 0:
+            self.logger.update(reward, gamelen)
         for episode in progress:
             # if hasattr(self, '_train_special'):
             #     self._train_special(episode, total_rewards, total_rewards_smooth)
