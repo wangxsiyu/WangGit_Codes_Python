@@ -134,16 +134,16 @@ class W_Trainer(W_Worker):
         if self.logger.get_start_episode() >= max_episodes:
             print(f'model already trained: total steps = {max_episodes}, skip')
             return
-        progress = tqdm(range(self.logger.get_start_episode(), max_episodes), position = tqdmpos, leave=True)
+        progress = tqdm(range(self.logger.get_start_episode(), max_episodes+1), position = tqdmpos, leave=True)
         self.progressbar = progress
         reward = self.run_worker(batch_size)
         gamelen = len(self.memory.memory[-1].reward)
         if self.logger.episode == 0:
             self.logger.update(reward, gamelen)
+            progress.set_description(f"Process {tqdmpos}, {self.logger.getdescription()}, Loss: {loss.item():.4f}")
         for episode in progress:
             # if hasattr(self, '_train_special'):
             #     self._train_special(episode, total_rewards, total_rewards_smooth)
-            # W.W_tic()
             buffer = self.memory.sample(batch_size)
             trainingbuffer = self.run_episode_outputlayer(buffer)
             self.optimizer.zero_grad()
@@ -153,14 +153,14 @@ class W_Trainer(W_Worker):
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.gradientclipping)
                 
             self.optimizer.step()
-            # W.W_toc("update time = ")
-            self.logger.save(self.model.state_dict())
 
-            progress.set_description(f"Process {tqdmpos}, {self.logger.getdescription()}, Loss: {loss.item():.4f}")
-            # progress.update()
+
             if not is_online:
                 reward = self.run_worker(batch_size)
             else:
                 reward = self.run_worker(1)
             gamelen = len(self.memory.memory[-1].reward)
             self.logger.update(reward, gamelen)
+            progress.set_description(f"Process {tqdmpos}, {self.logger.getdescription()}, Loss: {loss.item():.4f}")
+
+            self.logger.save(self.model.state_dict())
