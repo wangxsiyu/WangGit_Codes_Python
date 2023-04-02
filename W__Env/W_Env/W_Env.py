@@ -1,4 +1,5 @@
 from W_Env.task_Goal_Action import task_Goal_Action
+from W_Env.task_goal_action_4frame import task_MC_4frame
 from W_Env.task_Temporal_Discounting import task_Temporal_Discounting
 from W_Env.task_Horizon import task_Horizon
 from W_Env.task_TwoStep import task_TwoStep
@@ -11,12 +12,14 @@ from W_Env.task_TwoStep_Confidence_2frame import task_TwoStep_Confidence_2frame
 from W_Gym.W_Gym_simulator import W_env_simulator
 
 def W_Env(envname, *arg, **kwarg):
-    envnames  = ["MC", "WV", "Horizon", "TwoStep", "TwoStep_Confidence", \
+    envnames  = ["MC", "MC4", \
+                 "WV", "Horizon", "TwoStep", "TwoStep_Confidence", \
                  "TwoStep_simple","TwoStep_1frame", "TwoStep_Confidence_mini", \
                  "TwoStep_Confidence_2frame", "TwoStep_2frame_full"]
-    fullnames = ["task_Goal_Action", "task_Temporal_Discounting", "task_Horizon", \
+    fullnames = ["task_Goal_Action", "task_MC_4frame", \
+                 "task_Temporal_Discounting", "task_Horizon", \
                  'task_TwoStep', 'task_TwoStep_Confidence', 'task_TwoStep_Confidence_mini', \
-                    'TwoStep_Confidence_2frame','task_TwoStep_2frame_full']
+                 'TwoStep_Confidence_2frame','task_TwoStep_2frame_full']
     if not envname in envnames:
         raise Exception("env not defined")
     if envname == "MC":
@@ -37,6 +40,8 @@ def W_Env(envname, *arg, **kwarg):
         env = task_TwoStep_Confidence_mini(*arg, **kwarg)
     if envname == "TwoStep_Confidence_2frame":
         env = task_TwoStep_Confidence_2frame(*arg, **kwarg)
+    if envname == "MC4":
+        env = task_MC_4frame(*arg, **kwarg)
     # if envname == "TwoStep_2frame_full":
     #     env = task_TwoStep_2frame_full(*arg, **kwarg)
     return env
@@ -55,7 +60,7 @@ class W_Env_player():
         if self.player is not None:
             return self.player
         player = W_env_simulator(self.env)
-        if self.envname == "MC":
+        if self.envname in ["MC", "MC4"]:
             player.set_keys(keys = ['space', 'left', 'up', 'right','down'], actions = [0,1,2,3,4])
         if self.envname == "WV":
             player.set_keys(keys = ['space', 'a','b'], actions = [0,1,2])
