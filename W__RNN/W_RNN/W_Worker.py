@@ -41,11 +41,13 @@ class W_Buffer:
         sub = random.sample(self.memory, n)
         return sub
 
-    def sample(self, n):
+    def sample(self, n = None):
         if self.mode_sample == "last":
             d = self.get_last(n)
         elif self.mode_sample == "random":
             d = self.get_random(n)
+        elif self.mode_sample == "all":
+            d = self.memory
         d = self.tuple(*zip(*d))
         d = [np.stack(x) for x in d]
         d = [torch.from_numpy(x).float().to(self.device) for x in d]
