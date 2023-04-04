@@ -17,13 +17,17 @@ class W_env_simulator():
         self.keys_actions = {'keys':keys, 'actions': actions}
 
     def play(self, mode = "human", model = None):
+        if mode in ["oracle","oracle_human"]:
+            self.env.is_oracle = True
+        if mode == "oracle_human":
+            self.set_keys(['space'], [0])
         env = self.env
         obs = env.reset()
         # if model is not None:
         #     model.playmode()
         done = False
         while not done:
-            if mode == "human":
+            if mode in ["human", "oracle_human"]:
                 assert self.keys_actions is not None
                 action = None
                 while action is None:
@@ -33,6 +37,8 @@ class W_env_simulator():
                             if key == "escape":
                                 env.close()
                                 return
+                            elif key == "space" and mode == "oracle_human":
+                                action = env.get_oracle_action() 
                             elif key in self.keys_actions['keys']:
                                 kid = np.where([key == i for i in self.keys_actions['keys']])[0][0]
                                 action = self.keys_actions['actions'][kid]
@@ -40,5 +46,7 @@ class W_env_simulator():
                 action = env.action_space.sample()
             elif mode == "model":
                 action = model.predict(obs)
+            elif mode == "oracle":
+                action = None
             obs, R, done, _, info = env.step(action)            
                        

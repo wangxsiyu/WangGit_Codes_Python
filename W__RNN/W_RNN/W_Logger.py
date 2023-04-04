@@ -46,7 +46,7 @@ class W_Logger():
             for i in info.keys():
                 self.info[i] = np.hstack((self.info[i], info[i]))
 
-    def update(self, reward, gamelen):
+    def update(self, reward, gamelen = 1):
         info = self.info
         episode = self.episode
         info['rewards'][episode] = reward
@@ -58,13 +58,16 @@ class W_Logger():
         self.episode += 1
         self.info = info
 
-    def getdescription(self):
+    def getdescription(self, is_supervised = False):
         info = self.info
         reward = info['rewards'][self.episode - 1]
         avR = info['rewards_smooth'][self.episode - 1]
         avL = info['episodelength_smooth'][self.episode - 1]
         avRT = info['rewardrate_smooth'][self.episode - 1]
-        str = f"Episode {self.episode}/{self.max_episodes}, R {reward:.2f}, avR {avR:.2f}, len {avL:.1f}, rate {avRT:.2f}"
+        if is_supervised:
+            str = f"Episode {self.episode}/{self.max_episodes}, err {reward:.2f}, avERR {avR:.2f}"
+        else:
+            str = f"Episode {self.episode}/{self.max_episodes}, R {reward:.2f}, avR {avR:.2f}, len {avL:.1f}, rate {avRT:.2f}"
         return str
     
     def save(self, state_dict):

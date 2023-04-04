@@ -273,11 +273,12 @@ class W_Gym(W_Gym_render):
     last_reward = 0
     last_action = None
     last_stage = None
+    is_oracle = False
     # action_immediateadvance = None
     def __init__(self, n_maxT = np.Inf, n_maxTrials = np.Inf, \
                     n_maxTrialsPerBlock = np.Inf, n_maxBlocks = np.Inf, \
                     is_augment_obs = True, is_faltten_obs = True, \
-                    is_ITI = True, **kwarg):
+                    is_ITI = True, is_oracle = False, **kwarg):
         super().__init__(**kwarg)
         self.n_maxT = n_maxT
         self.n_maxTrials = n_maxTrials
@@ -286,6 +287,12 @@ class W_Gym(W_Gym_render):
         self.is_ITI = is_ITI
         self.valid_actions = None
         self.effective_actions = None
+
+        self.info_task = None
+        self.info_block = None
+        self.info_trial = None        
+
+        self.info = {'info_task':[], 'info_block':[], 'info_trial':[]}
         metadata = W.W_dict_kwargs()
         W.W_dict_updateonly(self.metadata_episode, metadata)
         self.setW_stage(["stages"], [np.Inf])
@@ -298,9 +305,12 @@ class W_Gym(W_Gym_render):
     
     def _len_actions(self):
         return self.action_space.n
+    
     # flow
     def reset(self, return_info = False):
+        self.info['info_task'] = None
         self.tot_trials = 0
+        self.tot_blocks = 0
         self.tot_t = 0
         self.last_action = None
         self.last_reward = 0
@@ -313,22 +323,51 @@ class W_Gym(W_Gym_render):
         if hasattr(self, '_draw_obs'):
             self._draw_obs()
         self.render(option = ['obs', 'time'])
+
+        self.task_info()
         obs = self._get_obs()
         info = self._get_info()
         return obs if not return_info else (obs, info)
 
     def reset_block(self):
+        self.tot_blocks += 1
         self.trial_counter = 0
         if hasattr(self, '_reset_block'):
             self._reset_block()
+        self.block_info()
 
     def reset_trial(self):
+        self.param_trial = None
         self.t = 0
         self.timer = 0
         self.stage = 0
         self.trial_is_error = False
         if hasattr(self, '_reset_trial'):
             self._reset_trial()
+        self.trial_info()
+    
+    def step_info(self):
+        pass
+
+    def block_info(self):
+        self.info_block = {'blockID': self.tot_blocks}
+        if hasattr(self, '_block_info'):
+            self._block_info()
+        self.info['info_block'].append(self.info_block)
+
+    def trial_info(self):
+        self.info_trial = {'blockID': self.tot_blocks, 'trialID': self.trial_counter}
+        if hasattr(self, '_trial_info'):
+            self._trial_info()
+        if hasattr(self, '_get_oracle_trial'):
+            self.info_trial['oracle'] = self._get_oracle_trial()
+        self.info['info_trial'].append(self.info_trial)
+
+    def task_info(self):
+        self.info['info_task'] = self.info_task
+
+    def get_oracle_action(self):
+        return self.action_oracle.pop(0)
     
     def step(self, action):
         reward_E = 0
@@ -391,11 +430,13 @@ class W_Gym(W_Gym_render):
 
         self.last_reward = reward_E + reward_I
         self.render(option = ["obs","action","reward","time"])
-        
+        self.step_info()
+
         obs = self._get_obs()
+        if hasattr(self, '_get_oracle_step'):
+            self._get_oracle_step()
         info = self._get_info()
         return obs, self.last_reward, is_done, self.tot_t, info
-    
 
     def find_stage(self, stagename):
         return np.where([j == stagename for j in self.metadata_stage['stage_names']])[0][0]

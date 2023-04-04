@@ -75,7 +75,9 @@ class W_Env_player():
         self.player = player
         return player
 
-    def play(self):
+    def play(self, *arg, **kwarg):
         if self.player is None:
             self.get_player()
-        self.player.play()
+        self.player.play(*arg, **kwarg)
+
+    

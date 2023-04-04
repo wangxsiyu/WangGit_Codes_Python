@@ -3,6 +3,8 @@ from collections import namedtuple
 import numpy as np
 import random
 from W_Python import W_tools as W
+from tqdm import tqdm 
+import pickle
 
 class W_Buffer:
     def __init__(self, tuple, capacity = np.Inf, mode_sample = "random", device = None, *arg, **kwarg):
@@ -41,12 +43,14 @@ class W_Buffer:
         sub = random.sample(self.memory, n)
         return sub
 
-    def sample(self, n = None):
-        if self.mode_sample == "last":
+    def sample(self, n = None, mode_sample = None):
+        if mode_sample is None:
+            mode_sample = self.mode_sample
+        if mode_sample == "last":
             d = self.get_last(n)
-        elif self.mode_sample == "random":
+        elif mode_sample == "random":
             d = self.get_random(n)
-        elif self.mode_sample == "all":
+        elif mode_sample == "all":
             d = self.memory
         d = self.tuple(*zip(*d))
         d = [np.stack(x) for x in d]
@@ -78,7 +82,8 @@ class W_Worker:
         return action
 
     def run_episode(self, mode_action = "softmax"):
-        self.model.eval()
+        if self.model is not None:
+            self.model.eval()
         done = False
         total_reward = 0
         obs = self.env.reset()
@@ -87,8 +92,11 @@ class W_Worker:
         while not done:
             # take actions
             obs = torch.from_numpy(obs).unsqueeze(0).float()
-            action_vector, val_estimate, mem_state_new = self.model(obs.unsqueeze(0).to(self.device), mem_state)
-            action = self.select_action(action_vector, mode_action)
+            if self.model is not None:
+                action_vector, val_estimate, mem_state = self.model(obs.unsqueeze(0).to(self.device), mem_state)
+                action = self.select_action(action_vector, mode_action)
+            elif mode_action == "oracle":            
+                action = torch.tensor(self.env.get_oracle_action(), dtype = torch.int64)
 
             obs_new, reward, done, timestep, _ = self.env.step(action.item())
             reward = float(reward)
@@ -98,13 +106,12 @@ class W_Worker:
             self.memory.add(obs.to('cpu').numpy(), action_onehot.to('cpu').numpy(), [reward], [timestep], [done])
             
             obs = obs_new
-            mem_state = mem_state_new
             total_reward += reward
 
         self.memory.push()
         return total_reward
 
-    def run_episode_outputlayer(self, buffer):
+    def run_episode_outputlayer(self, buffer, safeoption = 'all'):
         self.model.train()
         (obs, action, _,_,_) = buffer
         action = action.to(self.device)
@@ -118,13 +125,24 @@ class W_Worker:
         action_likelihood = (action_dist * action).sum(-1)
         tb = namedtuple('TrainingBuffer', ("action_dist","value", "action_likelihood"))
         return tb(action_dist, val_estimate, action_likelihood)
-
-    def run_worker(self, nrep = 1):
+        
+    def run_worker(self, nrep = 1, showprogress = False, *arg, **kwarg):
         # W.W_tic()
         rs = []
-        for _ in range(nrep):
-            r = self.run_episode()
+        rg = range(nrep)
+        if showprogress:
+            rg = tqdm(rg)
+        for _ in rg:
+            r = self.run_episode(*arg, **kwarg)
             rs.append(r)
         # W.W_toc("worker time = ")
         return np.mean(rs)
 
+    def run_oracle(self, nepisode, filename = None, *arg, **kwarg):
+        self.run_worker(nepisode, showprogress= True, mode_action = "oracle", *arg, **kwarg)
+        memory = self.memory.sample(mode_sample="all")
+        if filename is not None:
+            with open(filename, "wb") as f:
+                pickle.dump([memory.obs, memory.action, memory.reward, memory.timestep, memory.done], f)
+
+        

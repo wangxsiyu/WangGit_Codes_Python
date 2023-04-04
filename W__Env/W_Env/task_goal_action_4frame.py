@@ -21,6 +21,16 @@ class task_MC_4frame(W_Gym_grid2D):
         self.cccs = np.array([6,8,2,0])
         self.ccs = np.array([3,7,5,1])
     
+    def _get_oracle_trial(self):
+        param = self.param_trial
+        id = param['ccc_id'][param['oracle']]
+        avails = np.array([[0,1],[1,2],[2,3],[3,0]])
+        a1 = np.intersect1d(param['cc_id'], avails[id])[0]
+        mp = np.array([[1,-1,-1,3],[0,2,-1,-1],[-1,1,3,-1],[-1,-1,2,0]])
+        a2 = mp[a1, id]
+        self.action_oracle = [0,0,a1+1,a2+1]
+        return self.action_oracle
+
     def _setup_render(self):
         plottypes = ["circle", "square", "square", "square"]
         colors = [(255,255,255), (255,255,255), (0, 255, 0), (0, 0, 255)]
@@ -37,6 +47,12 @@ class task_MC_4frame(W_Gym_grid2D):
         
     def _reset_block(self):
         self.oracle = np.random.randint(2)
+        
+    def _block_info(self):
+        self.info_block['oracle'] = self.oracle
+
+    def _trial_info(self):
+        self.info_trial['params'] = self.param_trial 
     
     def _reset_trial(self):
         self.gaze.set_pos(1,1)
@@ -44,7 +60,7 @@ class task_MC_4frame(W_Gym_grid2D):
         ccs = self.ccs 
         ccc_id = np.random.choice(4,2, replace = False)
         cc_id = np.array([0,2]) + np.random.choice(2,1)
-        param = {'ccc_id': ccc_id, 'ccc_pos': cccs[ccc_id], 'cc_id':cc_id, 'cc_pos':ccs[cc_id]}
+        param = {'ccc_id': ccc_id, 'ccc_pos': cccs[ccc_id], 'cc_id':cc_id, 'cc_pos':ccs[cc_id], 'oracle': self.oracle}
         self.param_trial = param
         self.pos_choice1 = None
         self.pos_choice2 = None

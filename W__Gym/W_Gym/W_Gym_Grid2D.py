@@ -6,18 +6,20 @@ from gym import spaces
 class grid2D():
     xy_range = None
     pos_grid2D = None
+    lastpos_grid2D = None
     def __init__(self, x1 = -np.Inf, x2 = np.Inf, y1 = -np.Inf, y2 = np.Inf, **kwarg):
         self.xy_range = np.array([[x1, x2],[y1, y2]])
         self.set_pos(**kwarg)
 
     def set_pos(self, x0 = None, y0 = None):
         if x0 is not None and y0 is not None:
+            self.lastpos_grid2D = self.pos_grid2D
             self.pos_grid2D = self.restrict2range(np.array([x0, y0]))
     
     def move(self, dx, dy, **kwarg):
         d = np.array([dx, dy])
         pos = d + self.pos_grid2D
-        self.pos_grid2D = self.restrict2range(pos)
+        self.set_pos(pos[0], pos[1])
         return self._get_pos(**kwarg)
 
     def restrict2range(self, pos):
@@ -59,7 +61,7 @@ class W_Gym_grid2D(W_Gym):
         channelID = self.obs_Name2DimNumber[channel_name]
         self.currentscreen[x, y, channelID] = 1
 
-    def _render_frame_grid2D(self, canvas, data, dictname):
+    def _render_frame_grid2D(self, canvas, data, dictname, pointscale = 1):
         import pygame
         params = self.plot_params[dictname]
         if len(data.shape) == 1:
@@ -75,7 +77,7 @@ class W_Gym_grid2D(W_Gym):
                     tpos = self.plot_position[xi, yi]
                     if tval > 0: # show
                         if tplottype == "circle":
-                            pygame.draw.circle(canvas, tcol, tpos, np.mean(tradius))
+                            pygame.draw.circle(canvas, tcol, tpos, np.mean(tradius) * pointscale)
                         elif tplottype == "square":
                             pygame.draw.rect(canvas, tcol, 
                                 np.concatenate((-tradius + tpos, tradius * 2), axis = None), 0)
@@ -126,7 +128,10 @@ class W_Gym_grid2D(W_Gym):
         self.gaze.set_pos(0,0)
 
     def _render_frame_action(self, canvas):
-        canvas = self._render_frame_grid2D(canvas, self.gaze.pos_grid2D, 'action')
+        if self.gaze.pos_grid2D is not None:
+            canvas = self._render_frame_grid2D(canvas, self.gaze.pos_grid2D, 'action')
+        if self.gaze.lastpos_grid2D is not None:
+            canvas = self._render_frame_grid2D(canvas, self.gaze.lastpos_grid2D, 'action', pointscale = 0.5)
         return canvas
     
     def _render_frame_obs(self, canvas):
