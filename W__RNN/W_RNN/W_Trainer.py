@@ -131,6 +131,8 @@ class W_Trainer(W_Worker):
         else:
             self.logger = W_Logger()
         self.gradientclipping = gradientclipping
+        self.logger.is_supervised = False
+        self.logger.supervised_test_interval = 1
 
     def set_optim(self, param_optim):
         params = list(self.model.parameters())
@@ -169,25 +171,29 @@ class W_Trainer(W_Worker):
         if not isload and loadname is not None:
             isload = self.loaddict(loadname, isresume)
 
-    def train(self, max_episodes, batch_size, is_online = True, tqdmpos = 0, is_supervised = False):
+    def train(self, max_episodes, batch_size, is_online = True, tqdmpos = 0):
         self.logger.init(max_episodes)
         if self.logger.get_start_episode() >= max_episodes:
             print(f'model already trained: total steps = {max_episodes}, skip')
             return
         progress = tqdm(range(self.logger.get_start_episode()+1, max_episodes+1), position = tqdmpos, leave=True)
         self.progressbar = progress
-        if not is_supervised:
+        if not self.logger.is_supervised:
             reward = self.run_worker(batch_size)
             gamelen = len(self.memory.memory[-1].reward)
             if self.logger.episode == 0:
                 self.logger.update(reward, gamelen)
         else:
             if self.logger.episode == 0:
-                self.logger.update(0)
+                if self.logger.supervised_test_interval is not None:
+                    reward = self.run_worker(1)
+                else:
+                    reward = 0
+                self.logger.update(reward, 0)
         for _ in progress:
             # if hasattr(self, '_train_special'):
             #     self._train_special(episode, total_rewards, total_rewards_smooth)
-            if is_supervised:
+            if self.logger.is_supervised:
                 tid = np.random.choice(self.training_memory.reward.shape[0], batch_size)
                 buffer = [x[tid] for x in self.training_memory]
                 buffer = self.memory.tuple(*buffer)
@@ -202,9 +208,9 @@ class W_Trainer(W_Worker):
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.gradientclipping)
                 
             self.optimizer.step()
-            progress.set_description(f"Process {tqdmpos}, {self.logger.getdescription(is_supervised)}, Loss: {loss.item():.4f}")
+            progress.set_description(f"Process {tqdmpos}, {self.logger.getdescription()}, Loss: {loss.item():.4f}")
 
-            if not is_supervised:
+            if not self.logger.is_supervised:
                 if not is_online:
                     reward = self.run_worker(batch_size)
                 else:
@@ -212,9 +218,12 @@ class W_Trainer(W_Worker):
                 gamelen = len(self.memory.memory[-1].reward)
                 self.logger.update(reward, gamelen)
             else:
-                self.logger.update(info_loss['perror'])
-
-            self.logger.save(self.model.state_dict())
+                if self.logger.supervised_test_interval is not None and self.logger.episode % self.logger.supervised_test_interval == 0:
+                    reward = self.run_worker(1)
+                else:
+                    reward = 0
+                self.logger.update(reward, info_loss['perror'])
+                self.logger.save(self.model.state_dict())
 
     def load_memory(self, filename):
         with open(filename, "rb") as f:
