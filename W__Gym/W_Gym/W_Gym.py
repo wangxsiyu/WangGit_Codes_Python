@@ -1,6 +1,9 @@
 from W_Python import W_tools as W
 import gym
 import numpy as np
+from collections import namedtuple 
+import pandas
+
 
 class W_Gym_render(gym.Env):
     dt = None
@@ -292,7 +295,7 @@ class W_Gym(W_Gym_render):
         self.info_block = None
         self.info_trial = None        
 
-        self.info = {'info_task':[], 'info_block':[], 'info_trial':[]}
+        self.info = {'info_task':[], 'info_block':[], 'info_trial':[], 'info_step': []}
         metadata = W.W_dict_kwargs()
         W.W_dict_updateonly(self.metadata_episode, metadata)
         self.setW_stage(["stages"], [np.Inf])
@@ -326,6 +329,7 @@ class W_Gym(W_Gym_render):
 
         self.task_info()
         obs = self._get_obs()
+        self.info_step = {'obs':obs}
         info = self._get_info()
         return obs if not return_info else (obs, info)
 
@@ -342,12 +346,20 @@ class W_Gym(W_Gym_render):
         self.timer = 0
         self.stage = 0
         self.trial_is_error = False
+        last_trial = self.trial_counter
         if hasattr(self, '_reset_trial'):
             self._reset_trial()
-        self.trial_info()
+        self.trial_info(last_trial)
     
     def step_info(self):
         pass
+
+    def _step_info(self, obs, action, reward, is_done, tot_t):
+        self.info_step.update({'action':action, 'reward':reward, 'tot_t': tot_t, 'is_done':is_done, 'obs_next': obs})
+        self.info_step.update({'blockID': self.tot_blocks, 'trialID': self.trial_counter, 't':self.t, 'stage': self.stage})
+        self.step_info()
+        self.info['info_step'].append(self.info_step)
+        self.info_step = {'obs':obs}
 
     def block_info(self):
         self.info_block = {'blockID': self.tot_blocks}
@@ -355,8 +367,8 @@ class W_Gym(W_Gym_render):
             self._block_info()
         self.info['info_block'].append(self.info_block)
 
-    def trial_info(self):
-        self.info_trial = {'blockID': self.tot_blocks, 'trialID': self.trial_counter}
+    def trial_info(self, last_trial):
+        self.info_trial = {'blockID': self.tot_blocks, 'trialID': last_trial}
         if hasattr(self, '_trial_info'):
             self._trial_info()
         if hasattr(self, '_get_oracle_trial'):
@@ -391,6 +403,11 @@ class W_Gym(W_Gym_render):
             reward_E += tR_ext
             reward_I += tR_int       
         
+
+        last_t = self.tot_t
+
+
+
         # move on to the next time point
         # check is advance stage
         is_advance = False
@@ -430,11 +447,11 @@ class W_Gym(W_Gym_render):
 
         self.last_reward = reward_E + reward_I
         self.render(option = ["obs","action","reward","time"])
-        self.step_info()
 
         obs = self._get_obs()
         if hasattr(self, '_get_oracle_step'):
             self._get_oracle_step()
+        self._step_info(obs, action, self.last_reward, is_done, last_t)
         info = self._get_info()
         return obs, self.last_reward, is_done, self.tot_t, info
 
@@ -545,3 +562,26 @@ class W_Gym(W_Gym_render):
         if self.last_action is not None:
             action[self.last_action] = 1
         return action
+    
+    def format4save(self):
+        info = self._get_info()
+        d1 = self.info2pandas(info['info_step'])
+        d2 = self.info2pandas(info['info_trial'])
+        d2 = pandas.concat([d2.drop(columns = 'params'), self.info2pandas(list(d2.params))], axis = 1)
+        d3 = self.info2pandas(info['info_block'])
+        d3 = pandas.concat([d3.drop(columns = 'params'), self.info2pandas(list(d3.params))], axis = 1)
+
+        d23 = pandas.merge(d2, d3, on  = "blockID")
+
+        data = pandas.merge(d1, d23, on = ["blockID", "trialID"])
+        return data
+    
+    def info2pandas(self, tinfo):
+        namestep = tuple(tinfo[0].keys())
+        steptp = namedtuple('step', namestep)
+        step = [steptp(*v.values()) for v in tinfo]
+        step = steptp(*zip(*step))
+        step = [list(np.stack(x)) for x in step]
+        step = {k:v for k,v in zip(namestep, step)}
+        data = pandas.DataFrame.from_dict({k:step[k] for k in list(set(step.keys()))})
+        return data

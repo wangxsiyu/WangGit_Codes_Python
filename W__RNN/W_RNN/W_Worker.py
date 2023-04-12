@@ -5,6 +5,9 @@ import random
 from W_Python import W_tools as W
 from tqdm import tqdm 
 import pickle
+import os
+import re
+import pandas
 
 class W_Buffer:
     def __init__(self, tuple, capacity = np.Inf, mode_sample = "random", device = None, *arg, **kwarg):
@@ -81,14 +84,15 @@ class W_Worker:
             action = action_cat.sample()
         return action
 
-    def run_episode(self, mode_action = "softmax"):
+    def run_episode(self, mode_action = "softmax", is_test = False):
         if self.model is not None:
             self.model.eval()
         done = False
         total_reward = 0
         obs = self.env.reset()
         mem_state = None
-        self.memory.clear()
+        if not is_test:
+            self.memory.clear()
         while not done:
             # take actions
             obs = torch.from_numpy(obs).unsqueeze(0).float()
@@ -100,16 +104,22 @@ class W_Worker:
 
             obs_new, reward, done, timestep, _ = self.env.step(action.item())
             reward = float(reward)
-            action_onehot = torch.nn.functional.one_hot(action, self.env.action_space.n)
-            action_onehot = action_onehot.unsqueeze(0).float()
             
-            self.memory.add(obs.to('cpu').numpy(), action_onehot.to('cpu').numpy(), [reward], [timestep], [done])
+            if not is_test:
+                action_onehot = torch.nn.functional.one_hot(action, self.env.action_space.n)
+                action_onehot = action_onehot.unsqueeze(0).float()
+                self.memory.add(obs.to('cpu').numpy(), action_onehot.to('cpu').numpy(), [reward], [timestep], [done])
             
             obs = obs_new
             total_reward += reward
 
-        self.memory.push()
-        return total_reward
+       
+        if not is_test:
+            self.memory.push()
+        if is_test:
+            return self.env.format4save()
+        else:
+            return total_reward
 
     def run_episode_outputlayer(self, buffer, safeoption = 'all'):
         self.model.train()
@@ -126,17 +136,22 @@ class W_Worker:
         tb = namedtuple('TrainingBuffer', ("action_dist","value", "action_likelihood"))
         return tb(action_dist, val_estimate, action_likelihood)
         
-    def run_worker(self, nrep = 1, showprogress = False, *arg, **kwarg):
+    def run_worker(self, nrep = 1, showprogress = False, savename = None, *arg, **kwarg):
         # W.W_tic()
         rs = []
         rg = range(nrep)
         if showprogress:
             rg = tqdm(rg)
-        for _ in rg:
+        for i in rg:
             r = self.run_episode(*arg, **kwarg)
+            r.blockID = np.ones_like(r.blockID) * (i+1) 
             rs.append(r)
         # W.W_toc("worker time = ")
-        return np.mean(rs)
+        if savename is None:
+            return np.mean(rs)
+        else:
+            d = pandas.concat(rs)
+            d.to_csv(savename)
 
     def run_oracle(self, nepisode, filename = None, *arg, **kwarg):
         self.run_worker(nepisode, showprogress= True, mode_action = "oracle", *arg, **kwarg)
@@ -146,3 +161,34 @@ class W_Worker:
                 pickle.dump([memory.obs, memory.action, memory.reward, memory.timestep, memory.done], f)
 
         
+    def loaddict_folder(self, currentfolder, is_resume = True):
+        isload = False
+        file_trained_list = os.listdir(currentfolder)
+        fs = [re.search("(.*)_(.*).pt", x) for x in file_trained_list]
+        fs = [x for x in fs if x is not None]
+        if not len(fs) == 0:
+            its = [x.group(2) for x in fs]
+            tid = np.argmax([int(x) for x in its])
+            isload = self.loaddict(os.path.join(currentfolder, fs[tid].group(0)), is_resume)
+        return isload
+    
+    def loaddict(self, loadname, is_resume = True):
+        isload = False
+        if loadname is not None:
+            modeldata = torch.load(loadname)
+            self.model.load_state_dict(modeldata['state_dict'])
+            print(f"loaded model {loadname}")
+            if hasattr(self, 'logger'):
+                self.logger.last_saved_version = loadname
+                if is_resume:
+                    self.logger.start_episode = int(re.search("(.*)_(.*).pt", loadname).group(2)) + 1
+                    self.logger.setlog(modeldata['training_info'])
+            isload = True
+        return isload
+    
+    def loaddict_main(self, loadname = None, currentfolder = None, isresume = False):
+        isload = False
+        if currentfolder is not None:
+            isload = self.loaddict_folder(currentfolder, True)
+        if not isload and loadname is not None:
+            isload = self.loaddict(loadname, isresume)

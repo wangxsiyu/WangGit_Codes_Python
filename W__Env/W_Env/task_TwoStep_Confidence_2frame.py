@@ -16,6 +16,7 @@ class task_TwoStep_Confidence_2frame(W_Gym):
     def __init__(self, *arg, **kwarg):
         super().__init__(is_ITI = False, *arg, **kwarg)
         self.task_hyper_param = W.W_dict_updateonly(self.task_hyper_param, kwarg)
+
         self.observation_space = spaces.Discrete(3)
         # set action space
         self.action_space = spaces.Discrete(3) # take reward, shuttle1,2
@@ -26,16 +27,22 @@ class task_TwoStep_Confidence_2frame(W_Gym):
         stage_advanceuponaction = ["stage1", "stage2"]
         self.setW_stage(stage_names = stage_names, stage_advanceuponaction = stage_advanceuponaction)
 
+    def get_versionname(self):
+        tstr = 'T' if self.task_hyper_param['is_random_common0'] else 'F'
+        return f"pR{self.task_hyper_param['ps_high_state']*100:.0f}_pSR{self.task_hyper_param['p_switch_reward']*100:.1f}_pT{self.task_hyper_param['ps_common_trans']*100:.0f}_pST{self.task_hyper_param['p_switch_transition']*100:.1f}_PST0{tstr}_pA{self.task_hyper_param['ps_ambiguity']*100:.0f}"
+        
+
     def _reset_block(self):
-        p = random.sample(self.task_hyper_param['ps_common_trans'],1)[0]
+        self.info = {'info_task':[], 'info_block':[], 'info_trial':[], 'info_step': []}
+        p = random.sample(W.enlist(self.task_hyper_param['ps_common_trans']),1)[0]
         # need to implement continuous p
         if self.task_hyper_param['is_random_common0'] and np.random.rand() < 0.5:
             p = 1 - p
         self.task_param['p_trans'] = [p,p]
         self.high_state = np.random.choice(2,1)[0]
 
-        tid = np.random.choice(len(self.task_hyper_param['ps_high_state']),1)[0]
-        p = self.task_hyper_param['ps_high_state'][tid]
+        tid = np.random.choice(len(W.enlist(self.task_hyper_param['ps_high_state'])),1)[0]
+        p = W.enlist(self.task_hyper_param['ps_high_state'])[tid]
         # need to implement continuous p
             # p = np.random.rand()
             # p = np.max((p, 1-p))
@@ -49,7 +56,7 @@ class task_TwoStep_Confidence_2frame(W_Gym):
         self.task_param['p_reward_low'] = p
 
 
-        p = random.sample(self.task_hyper_param['ps_ambiguity'],1)[0]
+        p = random.sample(W.enlist(self.task_hyper_param['ps_ambiguity']),1)[0]
         self.task_param['p_ambiguity'] = p
 
     def _reset_trial(self):
@@ -68,8 +75,19 @@ class task_TwoStep_Confidence_2frame(W_Gym):
                 trans[i] = i
             else:
                 trans[i] = 1-i
-        self.param_trial = {'transition':trans.astype(int), 'reward':r}
+
+        if np.random.rand() < self.task_param['p_ambiguity']:
+            planet = np.random.choice(2,1)[0]
+        else:
+            planet = None
+        self.param_trial = {'transition':trans.astype(int), 'reward':r, 'randomplanet': planet}
         self.planet = None
+
+    def _block_info(self):
+        self.info_block['params'] = self.task_param
+
+    def _trial_info(self):
+        self.info_trial['params'] = self.param_trial 
 
     def _step_set_validactions(self):
         if self.metadata_stage['stage_names'][self.stage] in ["stage1"]:
@@ -93,8 +111,8 @@ class task_TwoStep_Confidence_2frame(W_Gym):
             # self.draw('stage1', 1)
         elif self.metadata_stage['stage_names'][self.stage] == "stage2":
             # self.draw('stage2', 1)
-            if np.random.rand() < self.task_param['p_ambiguity']:
-                planet = np.random.choice(2,1)[0]
+            if self.param_trial['randomplanet'] is not None:
+                planet = self.param_trial['randomplanet']
             else:
                 planet = self.planet
             if planet == 0:
@@ -114,3 +132,8 @@ class task_TwoStep_Confidence_2frame(W_Gym):
 
    
     
+    def format4save(self):
+        d = super().format4save()
+        d.trialID = np.ceil(d.tot_t/2)
+        d.stage = 1 - d.stage
+        return d
