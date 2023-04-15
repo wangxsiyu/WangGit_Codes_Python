@@ -144,7 +144,7 @@ class W_Worker:
             rg = tqdm(rg)
         for i in rg:
             r = self.run_episode(*arg, **kwarg)
-            r.blockID = np.ones_like(r.blockID) * (i+1) 
+            # r.blockID = np.ones_like(r.blockID) * (i+1) 
             rs.append(r)
         # W.W_toc("worker time = ")
         if savename is None:

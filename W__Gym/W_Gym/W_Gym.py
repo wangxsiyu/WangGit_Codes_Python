@@ -329,7 +329,7 @@ class W_Gym(W_Gym_render):
 
         self.task_info()
         obs = self._get_obs()
-        self.info_step = {'obs':obs}
+        self.info_step = {'obs':self._get_obs(False)}
         info = self._get_info()
         return obs if not return_info else (obs, info)
 
@@ -451,7 +451,7 @@ class W_Gym(W_Gym_render):
         obs = self._get_obs()
         if hasattr(self, '_get_oracle_step'):
             self._get_oracle_step()
-        self._step_info(obs, action, self.last_reward, is_done, last_t)
+        self._step_info(self._get_obs(False), action, self.last_reward, is_done, last_t)
         info = self._get_info()
         return obs, self.last_reward, is_done, self.tot_t, info
 
@@ -538,12 +538,12 @@ class W_Gym(W_Gym_render):
             return is_valid
 
     # get obs
-    def _get_obs(self):
+    def _get_obs(self, is_augment = None):
         if self.is_faltten_obs or self.is_augment_obs:
             obs = self.obs.flatten()
         else:
             obs = self.obs
-        if self.is_augment_obs:
+        if (is_augment is None and self.is_augment_obs) or is_augment:
             action = self._action_flattened()
             r = np.array(self.last_reward)
             r = r.reshape((1,))

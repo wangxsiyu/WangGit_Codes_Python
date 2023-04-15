@@ -8,6 +8,7 @@ from W_Env.task_TwoStep_simple import task_TwoStep_simple
 from W_Env.task_TwoStep_1frame import task_TwoStep_1frame
 from W_Env.task_TwoStep_Confidence_mini import task_TwoStep_Confidence_mini
 from W_Env.task_TwoStep_Confidence_2frame import task_TwoStep_Confidence_2frame
+from W_Env.task_TwoStep_Ambiguity_1frame import task_TwoStep_Ambiguity_1frame
 # from W_Env.task_TwoStep_2frame_full import task_TwoStep_2frame_full
 from W_Gym.W_Gym_simulator import W_env_simulator
 
@@ -15,11 +16,11 @@ def W_Env(envname, *arg, **kwarg):
     envnames  = ["MC", "MC4", \
                  "WV", "Horizon", "TwoStep", "TwoStep_Confidence", \
                  "TwoStep_simple","TwoStep_1frame", "TwoStep_Confidence_mini", \
-                 "TwoStep_Confidence_2frame", "TwoStep_2frame_full"]
+                 "TwoStep_Confidence_2frame", "TwoStep_2frame_full", 'TwoStep_Ambiguity_1frame']
     fullnames = ["task_Goal_Action", "task_MC_4frame", \
                  "task_Temporal_Discounting", "task_Horizon", \
                  'task_TwoStep', 'task_TwoStep_Confidence', 'task_TwoStep_Confidence_mini', \
-                 'TwoStep_Confidence_2frame','task_TwoStep_2frame_full']
+                 'TwoStep_Confidence_2frame','task_TwoStep_2frame_full', 'task_TwoStep_Ambiguity_1frame']
     if not envname in envnames:
         raise Exception("env not defined")
     if envname == "MC":
@@ -40,6 +41,8 @@ def W_Env(envname, *arg, **kwarg):
         env = task_TwoStep_Confidence_mini(*arg, **kwarg)
     if envname == "TwoStep_Confidence_2frame":
         env = task_TwoStep_Confidence_2frame(*arg, **kwarg)
+    if envname == "TwoStep_Ambiguity_1frame":
+        env = task_TwoStep_Ambiguity_1frame(*arg, **kwarg)
     if envname == "MC4":
         env = task_MC_4frame(*arg, **kwarg)
     # if envname == "TwoStep_2frame_full":
@@ -66,7 +69,7 @@ class W_Env_player():
             player.set_keys(keys = ['space', 'a','b'], actions = [0,1,2])
         if self.envname in ["Horizon", "TwoStep", "TwoStep_simple", "TwoStep_Confidence_2frame"]:
             player.set_keys(keys = ['space', 'left', 'right'], actions = [0,1,2])
-        if self.envname in ["TwoStep_1frame"]:
+        if self.envname in ["TwoStep_1frame", "TwoStep_Ambiguity_1frame"]:
             player.set_keys(keys = ['left', 'right'], actions = [0,1])
         if self.envname in ["TwoStep_Confidence"]:
             player.set_keys(keys = ['space', 'left', 'right', 'up'], actions = [0,1,2,3])

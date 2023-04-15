@@ -141,7 +141,7 @@ class W_Trainer(W_Worker):
             self.optimizer = torch.optim.RMSprop(params, lr = param_optim['lr'])
     
 
-    def train(self, max_episodes, batch_size, is_online = True, tqdmpos = 0):
+    def train(self, max_episodes, batch_size, is_online = True, tqdmpos = 0, tqdmstr = None):
         self.logger.init(max_episodes)
         if self.logger.get_start_episode() >= max_episodes:
             print(f'model already trained: total steps = {max_episodes}, skip')
@@ -178,7 +178,10 @@ class W_Trainer(W_Worker):
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.gradientclipping)
                 
             self.optimizer.step()
-            progress.set_description(f"Process {tqdmpos}, {self.logger.getdescription()}, Loss: {loss.item():.4f}")
+            if tqdmstr is None:
+                tqdmstr = f"Process {tqdmpos}"
+            
+            progress.set_description(f"{tqdmstr}, {self.logger.getdescription()}, Loss: {loss.item():.4f}")
 
             if not self.logger.is_supervised:
                 if not is_online:
@@ -187,6 +190,7 @@ class W_Trainer(W_Worker):
                     reward = self.run_worker(1)
                 gamelen = len(self.memory.memory[-1].reward)
                 self.logger.update(reward, gamelen)
+                self.logger.save(self.model.state_dict())
             else:
                 if self.logger.supervised_test_interval is not None and self.logger.episode % self.logger.supervised_test_interval == 0:
                     reward = self.run_worker(1)
