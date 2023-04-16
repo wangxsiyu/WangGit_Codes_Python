@@ -31,7 +31,6 @@ class task_TwoStep_Confidence_2frame(W_Gym):
         tstr = 'T' if self.task_hyper_param['is_random_common0'] else 'F'
         return f"pR{self.task_hyper_param['ps_high_state']*100:.0f}_pSR{self.task_hyper_param['p_switch_reward']*100:.1f}_pT{self.task_hyper_param['ps_common_trans']*100:.0f}_pST{self.task_hyper_param['p_switch_transition']*100:.1f}_PST0{tstr}_pA{self.task_hyper_param['ps_ambiguity']*100:.0f}"
         
-
     def _reset_block(self):
         self.info = {'info_task':[], 'info_block':[], 'info_trial':[], 'info_step': []}
         p = random.sample(W.enlist(self.task_hyper_param['ps_common_trans']),1)[0]
@@ -80,7 +79,7 @@ class task_TwoStep_Confidence_2frame(W_Gym):
             planet = np.random.choice(2,1)[0]
         else:
             planet = None
-        self.param_trial = {'transition':trans.astype(int), 'rewardplanet':r, 'randomplanet': planet}
+        self.param_trial = {'transition':trans.astype(int), 'rewardplanet':r, 'randomplanet': planet, 'highstate': self.high_state}
         self.planet = None
 
     def _block_info(self):
@@ -129,8 +128,6 @@ class task_TwoStep_Confidence_2frame(W_Gym):
         self._render_setplotparams('obs', plottypes, colors, radius, position)
         plottypes = ["binary"]
         self._render_setplotparams('action', plottypes, plotparams = [1,2])
-
-   
     
     def format4save(self):
         d = super().format4save()
