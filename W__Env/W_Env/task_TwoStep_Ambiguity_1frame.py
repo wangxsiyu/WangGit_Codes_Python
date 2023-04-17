@@ -79,7 +79,7 @@ class task_TwoStep_Ambiguity_1frame(W_Gym):
             planet = np.random.choice(2,1)[0]
         else:
             planet = None
-        self.param_trial = {'transition':trans.astype(int), 'rewardplanet':r, 'randomplanet': planet}
+        self.param_trial = {'transition':trans.astype(int), 'rewardplanet':r, 'randomplanet': planet, 'highstate': self.high_state}
 
     def _block_info(self):
         self.info_block['params'] = self.task_param
