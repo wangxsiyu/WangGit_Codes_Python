@@ -123,7 +123,7 @@ class task_TwoStep_Ambiguity_1frame(W_Gym):
         d = super().format4save()
         d.obs = np.matmul(np.stack(d.obs), np.array([[0],[1],[2]])).squeeze()
         d.obs_next = np.matmul(np.stack(d.obs_next), np.array([[0],[1],[2]])).squeeze()
-        d.trialID = np.ceil(d.tot_t/2)
+        # d.trialID = np.ceil(d.tot_t/2)
         d.stage = 1 - d.stage
         d.transition += 1
         return d
