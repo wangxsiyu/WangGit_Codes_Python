@@ -47,8 +47,10 @@ class W_Logger():
         else:            
             for i in info.keys():
                 self.info[i] = np.hstack((self.info[i], info[i]))
+        if hasattr(self, '_init'):
+            self._init()
 
-    def update(self, reward, gamelen):
+    def update(self, reward, gamelen, gameinfo):
         info = self.info
         episode = self.episode
         info['rewards'][episode] = reward
@@ -57,9 +59,11 @@ class W_Logger():
         info['episodelength_smooth'][episode] = info['episodelength'][max(0, episode-self.smooth_interval):(episode+1)].mean()
         info['rewardrate'][episode] = reward/gamelen
         info['rewardrate_smooth'][episode] = info['rewardrate'][max(0, episode-self.smooth_interval):(episode+1)].mean()
-        self.episode += 1
         self.info = info
-
+        if hasattr(self, '_update'):
+            self._update(gameinfo)
+        self.episode += 1
+        
     def getdescription(self):
         info = self.info
         reward = info['rewards'][self.episode - 1]
@@ -71,6 +75,8 @@ class W_Logger():
             str = f"Episode {self.episode}/{self.max_episodes}, R {reward:.2f}, avR {avR:.2f}, avERR {avL:.2f}"
         else:
             str = f"Episode {self.episode}/{self.max_episodes}, R {reward:.2f}, avR {avR:.2f}, len {avL:.1f}, rate {avRT:.2f}"
+        if hasattr(self, '_getdescription'):
+            str = self._getdescription(str)        
         return str
     
     def save(self, state_dict):

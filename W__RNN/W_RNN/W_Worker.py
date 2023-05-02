@@ -119,7 +119,7 @@ class W_Worker:
         if is_test:
             return self.env.format4save()
         else:
-            return total_reward
+            return total_reward, self.env._get_info()
 
     def run_episode_outputlayer(self, buffer, safeoption = 'all'):
         self.model.train()
@@ -143,12 +143,12 @@ class W_Worker:
         if showprogress:
             rg = tqdm(rg)
         for i in rg:
-            r = self.run_episode(*arg, **kwarg)
+            r, lastinfo = self.run_episode(*arg, **kwarg)
             # r.blockID = np.ones_like(r.blockID) * (i+1) 
             rs.append(r)
         # W.W_toc("worker time = ")
         if savename is None:
-            return np.mean(rs)
+            return np.mean(rs), lastinfo
         else:
             d = pandas.concat(rs)
             d.to_csv(savename)

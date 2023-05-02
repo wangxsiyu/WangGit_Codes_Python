@@ -149,10 +149,10 @@ class W_Trainer(W_Worker):
         progress = tqdm(range(self.logger.get_start_episode()+1, max_episodes+1), position = tqdmpos, leave=True)
         self.progressbar = progress
         if not self.logger.is_supervised:
-            reward = self.run_worker(batch_size)
+            reward, lastinfo = self.run_worker(batch_size)
             gamelen = len(self.memory.memory[-1].reward)
             if self.logger.episode == 0:
-                self.logger.update(reward, gamelen)
+                self.logger.update(reward, gamelen, lastinfo['info_block'])
         else:
             if self.logger.episode == 0:
                 if self.logger.supervised_test_interval is not None:
@@ -185,11 +185,11 @@ class W_Trainer(W_Worker):
 
             if not self.logger.is_supervised:
                 if not is_online:
-                    reward = self.run_worker(batch_size)
+                    reward, lastinfo = self.run_worker(batch_size)
                 else:
-                    reward = self.run_worker(1)
+                    reward, lastinfo = self.run_worker(1)
                 gamelen = len(self.memory.memory[-1].reward)
-                self.logger.update(reward, gamelen)
+                self.logger.update(reward, gamelen, lastinfo['info_block'])
                 self.logger.save(self.model.state_dict())
             else:
                 if self.logger.supervised_test_interval is not None and self.logger.episode % self.logger.supervised_test_interval == 0:
