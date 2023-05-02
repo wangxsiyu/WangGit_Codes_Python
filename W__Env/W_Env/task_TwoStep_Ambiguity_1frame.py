@@ -30,7 +30,7 @@ class task_TwoStep_Ambiguity_1frame(W_Gym):
 
     def get_versionname(self):
         tstr = 'T' if self.task_hyper_param['is_random_common0'] else 'F'
-        return f"pR{self.task_hyper_param['ps_high_state']*100:.0f}_pSR{self.task_hyper_param['p_switch_reward']*100:.1f}_pT{self.task_hyper_param['ps_common_trans']*100:.0f}_pST{self.task_hyper_param['p_switch_transition']*100:.1f}_PST0{tstr}_pA{self.task_hyper_param['ps_ambiguity']*100:.0f}"
+        return f"pR{self.task_hyper_param['ps_high_state']*100:.0f}_pSR{self.task_hyper_param['p_switch_reward']*1000:.0f}_pT{self.task_hyper_param['ps_common_trans']*100:.0f}_pST{self.task_hyper_param['p_switch_transition']*1000:.0f}_PST0{tstr}_pA{self.task_hyper_param['ps_ambiguity']*100:.0f}"
         
     def _reset_block(self):
         self.info = {'info_task':[], 'info_block':[], 'info_trial':[], 'info_step': []}
