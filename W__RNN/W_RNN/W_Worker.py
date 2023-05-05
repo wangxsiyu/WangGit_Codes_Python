@@ -158,7 +158,7 @@ class W_Worker:
             if lastinfo is not None:
                 efs = lastinfo.numpy()
                 efs = pandas.DataFrame(efs)
-                efs.to_csv(savename.replace('data', 'efs'))
+                efs.to_csv(savename.replace('data_', 'efs_'))
 
     def run_oracle(self, nepisode, filename = None, *arg, **kwarg):
         self.run_worker(nepisode, showprogress= True, mode_action = "oracle", *arg, **kwarg)
