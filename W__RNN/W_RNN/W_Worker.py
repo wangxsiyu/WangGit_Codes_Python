@@ -136,7 +136,7 @@ class W_Worker:
         tb = namedtuple('TrainingBuffer', ("action_dist","value", "action_likelihood"))
         return tb(action_dist, val_estimate, action_likelihood)
         
-    def run_worker(self, nrep = 1, showprogress = False, savename = None, *arg, **kwarg):
+    def run_worker(self, nrep = 1, showprogress = False, savename = None, record = True, *arg, **kwarg):
         # W.W_tic()
         rs = []
         rg = range(nrep)
@@ -152,6 +152,8 @@ class W_Worker:
         else:
             d = pandas.concat(rs)
             d.to_csv(savename)
+            if record:
+                pass
 
     def run_oracle(self, nepisode, filename = None, *arg, **kwarg):
         self.run_worker(nepisode, showprogress= True, mode_action = "oracle", *arg, **kwarg)
