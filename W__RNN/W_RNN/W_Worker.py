@@ -84,7 +84,7 @@ class W_Worker:
             action = action_cat.sample()
         return action
 
-    def run_episode(self, mode_action = "softmax", is_test = False):
+    def run_episode(self, mode_action = "softmax", is_test = False, record = False):
         if self.model is not None:
             self.model.eval()
         done = False
@@ -93,6 +93,7 @@ class W_Worker:
         mem_state = None
         if not is_test:
             self.memory.clear()
+        recording = []
         while not done:
             # take actions
             obs = torch.from_numpy(obs).unsqueeze(0).float()
@@ -101,7 +102,8 @@ class W_Worker:
                 action = self.select_action(action_vector, mode_action)
             elif mode_action == "oracle":            
                 action = torch.tensor(self.env.get_oracle_action(), dtype = torch.int64)
-
+            if record:
+                recording.append(mem_state[0])
             obs_new, reward, done, timestep, _ = self.env.step(action.item())
             reward = float(reward)
             
@@ -112,12 +114,13 @@ class W_Worker:
             
             obs = obs_new
             total_reward += reward
-
+        if record:
+            recording = torch.concatenate(recording).squeeze()
        
         if not is_test:
             self.memory.push()
         if is_test:
-            return self.env.format4save()
+            return self.env.format4save(), recording
         else:
             return total_reward, self.env._get_info()
 
@@ -136,7 +139,7 @@ class W_Worker:
         tb = namedtuple('TrainingBuffer', ("action_dist","value", "action_likelihood"))
         return tb(action_dist, val_estimate, action_likelihood)
         
-    def run_worker(self, nrep = 1, showprogress = False, savename = None, record = True, *arg, **kwarg):
+    def run_worker(self, nrep = 1, showprogress = False, savename = None, *arg, **kwarg):
         # W.W_tic()
         rs = []
         rg = range(nrep)
@@ -153,7 +156,9 @@ class W_Worker:
             d = pandas.concat(rs)
             d.to_csv(savename)
             if record:
-                pass
+                efs = lastinfo.numpy()
+                efs = pandas.DataFrame(efs)
+                efs.to_csv(savename.replace('data', 'efs'))
 
     def run_oracle(self, nepisode, filename = None, *arg, **kwarg):
         self.run_worker(nepisode, showprogress= True, mode_action = "oracle", *arg, **kwarg)
