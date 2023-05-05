@@ -155,7 +155,7 @@ class W_Worker:
         else:
             d = pandas.concat(rs)
             d.to_csv(savename)
-            if record:
+            if lastinfo is not None:
                 efs = lastinfo.numpy()
                 efs = pandas.DataFrame(efs)
                 efs.to_csv(savename.replace('data', 'efs'))
