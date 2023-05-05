@@ -145,18 +145,21 @@ class W_Worker:
         rg = range(nrep)
         if showprogress:
             rg = tqdm(rg)
+        info = []
         for i in rg:
             r, lastinfo = self.run_episode(*arg, **kwarg)
             # r.blockID = np.ones_like(r.blockID) * (i+1) 
             rs.append(r)
+            lastinfo.session
+            info.append(lastinfo)
         # W.W_toc("worker time = ")
         if savename is None:
             return np.mean(rs), lastinfo
         else:
             d = pandas.concat(rs)
             d.to_csv(savename)
-            if lastinfo is not None:
-                efs = lastinfo.numpy()
+            if info is not None:
+                efs = torch.concatenate(info).numpy()
                 efs = pandas.DataFrame(efs)
                 efs.to_csv(savename.replace('data_', 'efs_'))
 
