@@ -115,7 +115,7 @@ class W_Worker:
             obs = obs_new
             total_reward += reward
         if record:
-            recording = torch.concatenate(recording).squeeze()
+            recording = torch.concat(recording).squeeze()
        
         if not is_test:
             self.memory.push()
@@ -150,7 +150,7 @@ class W_Worker:
             r, lastinfo = self.run_episode(*arg, **kwarg)
             # r.blockID = np.ones_like(r.blockID) * (i+1) 
             rs.append(r)
-            lastinfo.session
+            # lastinfo.session
             info.append(lastinfo)
         # W.W_toc("worker time = ")
         if savename is None:
@@ -159,7 +159,7 @@ class W_Worker:
             d = pandas.concat(rs)
             d.to_csv(savename)
             if info is not None:
-                efs = torch.concatenate(info).numpy()
+                efs = torch.concat(info).numpy()
                 efs = pandas.DataFrame(efs)
                 efs.to_csv(savename.replace('data_', 'efs_'))
 
