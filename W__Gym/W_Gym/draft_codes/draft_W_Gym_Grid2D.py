@@ -41,9 +41,9 @@ class W_Gym_grid2D(W_Gym):
         super().__init__(**kwarg)
         self.observation_space = spaces.Box(low = 0, high = 1, shape = (nx, ny, ndim_obs), dtype = np.int8)
         self.obs = np.zeros(self.observation_space.shape)
-        self.gaze = grid2D(0,2,0,2) # action object
+        self.gaze = grid2D(0,nx-1,0,ny-1) # action object
         self._action_dimension = nx * ny
-        self.plot_position = self.pos_grid(nx, ny) * self.metadata_render['window_size']
+        self.plot_position = self.pos_grid(ny, nx) * self.metadata_render['window_size']
         
     def pos_grid(self, nx, ny):
         x = np.linspace(0, 1, nx, endpoint=False) + 1/nx/2

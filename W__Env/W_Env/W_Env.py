@@ -9,6 +9,7 @@ from W_Env.task_TwoStep_1frame import task_TwoStep_1frame
 from W_Env.task_TwoStep_Confidence_mini import task_TwoStep_Confidence_mini
 from W_Env.task_TwoStep_Confidence_2frame import task_TwoStep_Confidence_2frame
 from W_Env.task_TwoStep_Ambiguity_1frame import task_TwoStep_Ambiguity_1frame
+from W_Env.task_tokens import task_tokens
 # from W_Env.task_TwoStep_2frame_full import task_TwoStep_2frame_full
 from W_Gym.W_Gym_simulator import W_env_simulator
 
@@ -16,11 +17,11 @@ def W_Env(envname, *arg, **kwarg):
     envnames  = ["MC", "MC4", \
                  "WV", "Horizon", "TwoStep", "TwoStep_Confidence", \
                  "TwoStep_simple","TwoStep_1frame", "TwoStep_Confidence_mini", \
-                 "TwoStep_Confidence_2frame", "TwoStep_2frame_full", 'TwoStep_Ambiguity_1frame']
+                 "TwoStep_Confidence_2frame", "TwoStep_2frame_full", 'TwoStep_Ambiguity_1frame', 'tokens']
     fullnames = ["task_Goal_Action", "task_MC_4frame", \
                  "task_Temporal_Discounting", "task_Horizon", \
                  'task_TwoStep', 'task_TwoStep_Confidence', 'task_TwoStep_Confidence_mini', \
-                 'TwoStep_Confidence_2frame','task_TwoStep_2frame_full', 'task_TwoStep_Ambiguity_1frame']
+                 'TwoStep_Confidence_2frame','task_TwoStep_2frame_full', 'task_TwoStep_Ambiguity_1frame', 'task_tokens']
     if not envname in envnames:
         raise Exception("env not defined")
     if envname == "MC":
@@ -45,6 +46,8 @@ def W_Env(envname, *arg, **kwarg):
         env = task_TwoStep_Ambiguity_1frame(*arg, **kwarg)
     if envname == "MC4":
         env = task_MC_4frame(*arg, **kwarg)
+    if envname == "tokens":
+        env = task_tokens(*arg, **kwarg)
     # if envname == "TwoStep_2frame_full":
     #     env = task_TwoStep_2frame_full(*arg, **kwarg)
     return env
@@ -63,7 +66,7 @@ class W_Env_player():
         if self.player is not None:
             return self.player
         player = W_env_simulator(self.env)
-        if self.envname in ["MC", "MC4"]:
+        if self.envname in ["MC", "MC4", "tokens"]:
             player.set_keys(keys = ['space', 'left', 'up', 'right','down'], actions = [0,1,2,3,4])
         if self.envname == "WV":
             player.set_keys(keys = ['space', 'a','b'], actions = [0,1,2])
