@@ -1,4 +1,3 @@
-import gym
 from collections import namedtuple
 import pandas
 
@@ -256,7 +255,6 @@ class W_Gym_render(gym.Env):
         return pos * self.metadata_render['window_size']
 
 class W_Gym(W_Gym_render):
-    Rewards = {"R_advance":0, "R_error": -1, "R_reward": 1}
     obs = None
     obs_augment = None
     is_augment_obs = False
@@ -275,19 +273,10 @@ class W_Gym(W_Gym_render):
     last_stage = None
     is_oracle = False
     # action_immediateadvance = None
-    def __init__(self, n_maxT = np.Inf, n_maxTrials = np.Inf, \
-                    n_maxTrialsPerBlock = np.Inf, n_maxBlocks = np.Inf, \
-                    is_augment_obs = True, is_faltten_obs = True, \
-                    is_ITI = True, is_oracle = False, **kwarg):
-        super().__init__(**kwarg)
-        self.is_augment_obs = is_augment_obs
-        self.is_faltten_obs = is_faltten_obs or self.is_augment_obs
-        self.is_ITI = is_ITI
+    def __init__(self, is_oracle = False):
 
 
         self.info = {'info_task':[], 'info_block':[], 'info_trial':[], 'info_step': []}
-        metadata = W.W_dict_kwargs()
-        W.W_dict_updateonly(self.metadata_episode, metadata)
         self.setW_stage(["stages"], [np.Inf])
 
     def _len_observation(self):
@@ -306,18 +295,12 @@ class W_Gym(W_Gym_render):
         self.last_action = None
         self.last_reward = 0
 
-        if hasattr(self, '_step_set_validactions'):
-            self._step_set_validactions()
-        if hasattr(self, '_draw_obs'):
-            self._draw_obs()
         self.render(option = ['obs', 'time'])
 
         self.task_info()
         self.info_step = {'obs':self._get_obs(False)}
 
     def reset_trial():
-        self.param_trial = None
-        self.trial_is_error = False
         last_trial = self.trial_counter
 
 
@@ -360,141 +343,25 @@ class W_Gym(W_Gym_render):
 
 
 
-        # move on to the next time point
-        # check is advance stage
-        is_advance = False
-        # self.action_immediateadvance = None
-        if not is_error:
-            if self.metadata_stage['stage_advanceuponaction'][self.stage] == 1:
-                if self.effective_actions is None:
-                    effective_actions = self.valid_actions
-                else:
-                    effective_actions = self.effective_actions
-                if self.check_isvalidaction(action, effective_actions):
-                    is_advance = True
-                    # self.action_immediateadvance = action
-            if self.timer >= self.metadata_stage['stage_timings'][self.stage]:
-                is_advance = True
-        # move on to the next stage
-        if is_error or is_advance:
-            tR_ext, tR_int, is_done = self.advance_stage(is_error)
-            reward_E += tR_ext
-            reward_I += tR_int
-        else:
-            is_done = False
 
-        if self.tot_t >= self.n_maxT:
-            is_done = True
-        # get consequences of actions (after)
-        if not is_error and hasattr(self, '_step_after'):
-            tR_ext, tR_int = self._step_after(action)
-            reward_E += tR_ext
-            reward_I += tR_int
 
-        # set valid actions for the new observation
-        if hasattr(self, '_step_set_validactions'):
-            self._step_set_validactions()
-        if hasattr(self, '_draw_obs'):
-            self._draw_obs()
-
-        self.last_reward = reward_E + reward_I
         self.render(option = ["obs","action","reward","time"])
 
-        obs = self._get_obs()
         if hasattr(self, '_get_oracle_step'):
             self._get_oracle_step()
         self._step_info(self._get_obs(False), action, self.last_reward, is_done, last_t)
         info = self._get_info()
         return obs, self.last_reward, is_done, self.tot_t, info
 
-    def find_stage(self, stagename):
-        return np.where([j == stagename for j in self.metadata_stage['stage_names']])[0][0]
-
-    def advance_stage(self, is_error = False):
-        is_done = False
-        R_ext = 0
-        R_int = 0
-        is_nexttrial = 0
-        if not is_error:
-            self.stage, is_error = self._advance_stage()
-            if not is_error:
-                R_int = self.Rewards['R_advance']
-                self.timer = 0 # auto reset timer
-                if self.stage == len(self.metadata_stage['stage_names']):
-                    is_nexttrial = 1
-
-        if is_error:
-            self.trial_is_error = True
-            R_int = self.Rewards['R_error']
-            if "ITI" in self.metadata_stage['stage_names']:
-                self.stage = self.find_stage('ITI')
-                self.timer = 0 # auto reset timer
-            else:
-                is_nexttrial = 1
-
-        if is_nexttrial == 1:
-            self.tot_trials += 1
-            self.trial_counter += 1
-            if self.tot_trials >= self.n_maxTrials:
-                is_done = True
-            if self.trial_counter >= self.metadata_episode['n_maxTrialsPerBlock']:
-                self.reset_block()
-            self.reset_trial()
-
-        return R_ext, R_int, is_done
 
     def _advance_stage(self):
         is_error = False
         return self.stage + 1, is_error
 
-    # rewards
-    def setW_reward(self, **kwarg):
-        W.W_dict_updateonly(self.Rewards, kwarg)
 
-    def setW_stage(self, stage_names, stage_timings_user = None, \
-                   stage_advanceuponaction = None):
-        if self.is_ITI and not "ITI" in stage_names:
-            stage_names.append("ITI")
-        self.metadata_stage['stage_names'] = stage_names
-        nstage = len(self.metadata_stage['stage_names'])
-        stage_timings = np.ones(nstage) * self.dt
-        if stage_timings_user is not None:
-            stage_timings[np.arange(0, len(stage_timings_user))] = stage_timings_user
-        # if stage_advanceuponaction is None:
-        #     stage_advanceuponaction = "ITI"
-        # elif not "ITI" in stage_advanceuponaction and "ITI" in self.metadata_stage['stage_names']:
-        #     stage_advanceuponaction.append("ITI")
-
-        c = np.zeros(nstage)
-        if stage_advanceuponaction is not None:
-            tid = np.array([np.where([j == i for j in self.metadata_stage['stage_names']]) for i in iter(stage_advanceuponaction)]).squeeze()
-            c[tid] = 1
-        stage_advanceuponaction = c
-
-        self.metadata_stage['stage_timings'] = stage_timings
-        self.metadata_stage['stage_advanceuponaction'] = stage_advanceuponaction
-
-    def probabilistic_reward(self, p):
-        if np.random.uniform() <= p:
-            reward = self.Rewards['R_reward']
-        else:
-            reward = 0
-        return reward
     # action
 
     # get obs
-    def _get_obs(self, is_augment = None):
-        if self.is_faltten_obs or self.is_augment_obs:
-            obs = self.obs.flatten()
-        else:
-            obs = self.obs
-        if (is_augment is None and self.is_augment_obs) or is_augment:
-            action = self._action_flattened()
-            r = np.array(self.last_reward)
-            r = r.reshape((1,))
-            obs = np.concatenate((obs, r, action))
-        return obs
-
     def _get_info(self):
         return self.info
 
