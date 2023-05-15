@@ -1,6 +1,7 @@
 from W_Python import W_tools as W
 import numpy as np
 import gym
+import pandas as pd
 
 class W_Gym_task(gym.Env):
     """
@@ -45,20 +46,23 @@ class W_Gym_task(gym.Env):
     _state_valid_actions = None # valid actions for a state
     _state_effective_actions = None # effective actions for a state
     # data variable (recorded behavior)
-    _data_task = None # data for task 
-    _data_block = None # data for block
-    _data_trial = None # data for trial
-    _data_state = None # data for state
+    _data_issave = False
+    _data_istable = True
+    _data = None
     
     def __init__(self, n_maxTime = np.Inf, n_maxTrials = np.Inf, n_maxBlocks = np.Inf, \
                     block_n_maxTrials = np.Inf, option_augment_obs = ["action", "reward"], \
-                    is_flatten_obs = True, is_ITI = True, dt = 1, *arg, **kwarg):
+                    is_flatten_obs = True, is_ITI = True, dt = 1, is_save = False, is_save_table = True, *arg, **kwarg):
         super().__init__(*arg, **kwarg)
         _param_inputs = W.W_dict_kwargs()
         W.W_dict_updateonly(self._param_gym, _param_inputs)
         if self._param_gym['option_augment_obs'] is not None:
             self._param_gym['is_flatten_obs'] = True
         self._time_unit = dt
+        self._data_issave = is_save
+        self._data_istable = is_save_table
+        if self._data_issave:
+            self._data = None if self._data_istable else  {'task': None, 'block': None, 'trial': None, 'data': None}
 
     def setup_state_parameters(self, state_names, state_timelimits = None, \
                     state_immediateadvance = None, \
@@ -99,12 +103,12 @@ class W_Gym_task(gym.Env):
         W.W_dict_updateonly(self._param_rewards, kwarg)
 
     def reset(self):
-        self._data_task = None
         self._time_task = 0
         self._count_block = 0
         self._task_trial = 0
         if hasattr(self, 'custom_reset'):
             self.custom_reset()
+        self._record('task', self._param_task)
         self._reset_block()
         # draw new observation
         if hasattr(self, 'draw_observation'):
@@ -117,21 +121,21 @@ class W_Gym_task(gym.Env):
     
     def _reset_block(self):
         self._param_block = {}
-        self._data_block = None
         self._count_block_trial = 0
         self._time_block = 0
         if hasattr(self, 'custom_reset_block'):
             self.custom_reset_block()
+        self._record('block', self._param_block)
         self._reset_trial()
 
     def _reset_trial(self):
         self._param_trial = {}
-        self._data_trial = None
         self._time_trial = 0
         self._trial_is_error = False
         if hasattr(self, 'custom_reset_trial'):
             self.custom_reset_trial()
         self._state = 0
+        self._record('trial', self._param_trial)
         self._reset_state()
         
     def _reset_state(self):
@@ -204,6 +208,7 @@ class W_Gym_task(gym.Env):
         reward = 0
         # advance time
         is_done = self._advance_time()
+        tdata = {'time_task': self._time_task, 'time_trial': self._time_trial, 'state': self._param_state['names'][self._state], 'obs': self.format_obs_for_save(self._obs)}
         # transform actions
         if hasattr(self, "transform_actions"):
             action = self.transform_actions(action_motor)
@@ -245,9 +250,10 @@ class W_Gym_task(gym.Env):
         
         self._last_action = action
         self._last_reward = reward
+        tdata.update({'action': action, 'is_error': is_error, 'reward': reward})
         # record current action
         if is_record:
-            self._record({'action': action, 'is_error': is_error, 'reward': reward})
+            self._record('data', tdata)
         # draw new observation
         if hasattr(self, 'draw_observation'):
             self.draw_observation()
@@ -295,6 +301,9 @@ class W_Gym_task(gym.Env):
                 obs = np.concatenate((obs, tval))
         return obs
     
+    def format_obs_for_save(self, obs):
+        return obs.flatten()
+    
     def _get_action_onehot(self, action):
         n = self.get_n_actions()
         action_onehot = np.zeros(n)
@@ -340,9 +349,24 @@ class W_Gym_task(gym.Env):
     def setup_obs_channelID(self, mydict):
         self._obs_channelID = mydict
     
-    def _record(self, datadict):
-        pass
-
+    def _record(self, datatype, datadict = None):
+        if not self._data_issave:
+            return
+        if self._data_istable and not datatype == "data":
+            return
+        if self._data_istable: # must have datatype == "data"
+            datadict.update(self._param_trial)
+            datadict.update(self._param_block)
+            datadict.update(self._param_task)
+            df = self._data 
+            if df is None:
+                df = pd.DataFrame()
+            self._data = pd.concat((df, pd.DataFrame.from_dict(datadict, orient = "index").T))
+        else:        
+            df = self._data[datatype] 
+            if df is None:
+                df = pd.DataFrame()
+            self._data[datatype] = pd.concat((df, pd.DataFrame.from_dict(datadict, orient = "index").T))
     
 
 

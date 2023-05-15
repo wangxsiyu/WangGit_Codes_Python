@@ -103,3 +103,5 @@ class task_TwoStep(W_Gym):
         self._render_set_auto_parameters('action', plottypes, additional_params = [0, 1])
         self.setup_human_keys_auto('binary')
 
+    def format_obs_for_save(self, obs):
+        return np.sum(obs * np.array([0,1,2]))
