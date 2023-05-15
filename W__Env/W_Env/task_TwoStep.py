@@ -1,79 +1,105 @@
-from gym import spaces
 from W_Gym.W_Gym import W_Gym
 from W_Python import W_tools as W
+from gym import spaces
+import random
 import numpy as np
 
 class task_TwoStep(W_Gym):
-    task_param = {'p_switch': 0.025, 'p_trans':[0.8, 0.8], 'p_reward_high': 0.9, 'p_reward_low': 0.1}
-    high_state = None
+    _param_task = {'p_switch_reward': 0, 'p_switch_transition': 0, \
+                  'ps_high_state':[0.8], 'ps_low_state':None, \
+                  'ps_common_trans':[0.8], 'ps_ambiguity': [0], \
+                  'is_random_common0': False, \
+                  }
+    
     def __init__(self, *arg, **kwarg):
-        super().__init__(*arg, **kwarg)
-        self.observation_space = spaces.Discrete(4)
+        super().__init__(is_ITI = False, *arg, **kwarg)
+        self._param_task = W.W_dict_updateonly(self._param_task, kwarg)
+        # observation space
+        self.observation_space = spaces.Discrete(3) # state 0, state 1, state 2
         # set action space
-        self.action_space = spaces.Discrete(3) # fix, L, R
+        self.action_space = spaces.Discrete(2) # shuttle 1, shuttle 2
         # set rendering dimension names
-        self.setup_obs_Name2DimNumber({'fixation':0, \
-                                       'planet0':1, 'planet1':2, 'planet2':3})
+        self.setup_obs_channelID({'planet0':0, 'planet1':1, 'planet2':2})
         # set stages
-        stage_names = ["fixation", "stage1", "stage2"]
-        stage_advanceuponaction = ["stage1", "stage2"]
-        self.setW_stage(stage_names = stage_names, stage_advanceuponaction = stage_advanceuponaction)
-        self.effective_actions = [1, 2]
+        state_names = ["stage1"]
+        state_immediateadvance = ["stage1"]
+        self.setup_state_parameters(state_names=state_names, state_immediateadvance=state_immediateadvance)
 
-    def _setup_render(self):
-        plottypes = ["circle", "circle", "circle", "circle"]
-        colors = [(255,255,255), (100,100,100), (0,255,0), (0,0,255)]
-        radius = [0.02, 0.25, 0.25, 0.25]
-        self._render_setplotparams('obs', plottypes, colors, radius)
-        plottypes = ["binary"]
-        self._render_setplotparams('action', plottypes, plotparams = [1,2])
+    def custom_reset_block(self):
+        p = random.sample(W.enlist(self._param_task['ps_common_trans']),1)[0]
+        if self._param_task['is_random_common0'] and np.random.rand() < 0.5:
+            p = 1 - p
+        self._env_vars['p_trans'] = [p,p]
+        self._env_vars['high_state'] = np.random.choice(2,1)[0]
 
-    def _reset_block(self):
-        self.high_state = np.random.choice(2,1)[0]
+        tid = np.random.choice(len(W.enlist(self._param_task['ps_high_state'])),1)[0]
+        p = W.enlist(self._param_task['ps_high_state'])[tid]
+        
+        self._param_block['p_reward_high'] = p
 
-    def _reset_trial(self):
-        if np.random.rand() < self.task_param['p_switch']:
-            self.high_state = 1- self.high_state
-        r_high = np.array(np.random.rand() < self.task_param['p_reward_high']).astype(int)
-        r_low = np.array(np.random.rand() < self.task_param['p_reward_low']).astype(int)
+        if self._param_task['ps_low_state'] is None:
+            p = 1-p
+        else:
+            p = self._param_task['ps_low_state'][tid]
+        self._param_block['p_reward_low'] = p
+
+        p = random.sample(W.enlist(self._param_task['ps_ambiguity']),1)[0]
+        self._param_block['p_ambiguity'] = p
+        self._env_vars['planet'] = None
+    
+    def custom_reset_trial(self):
+        if np.random.rand() < self._param_task['p_switch_reward']: # flip reward
+            self._env_vars['high_state']  = 1- self._env_vars['high_state'] 
+        if np.random.rand() < self._param_task['p_switch_transition']: # flip transition
+            self._env_vars['p_trans'] = [1 - x for x in self._env_vars['p_trans']]
+        r_high = np.array(np.random.rand() < self._param_block['p_reward_high']).astype(int)
+        r_low = np.array(np.random.rand() < self._param_block['p_reward_low']).astype(int)
         r = np.zeros(2)
-        r[self.high_state] = r_high
-        r[1 - self.high_state] = r_low
+        r[self._env_vars['high_state']] = r_high
+        r[1 - self._env_vars['high_state']] = r_low
+
         trans = np.zeros(2)
         for i in range(2):
-            if np.random.rand() < self.task_param['p_trans'][i]:
+            if np.random.rand() < self._env_vars['p_trans'][i]:
                 trans[i] = i
             else:
                 trans[i] = 1-i
-        param = {'transition':trans.astype(int), 'reward':r} # 1,5,10 (change this)
-        self.param_trial = param
-        self.planet = None
 
-    def _step(self, action):
-        R_ext = 0
-        R_int = 0
-        if self.metadata_stage['stage_names'][self.stage] == "stage1" and self.is_effective_action:
-            self.planet = self.param_trial['transition'][action -1]
-        if self.metadata_stage['stage_names'][self.stage] == "stage2":
-            R_ext = self.param_trial['reward'][self.planet]
-        return R_ext, R_int
-    
-    def _step_set_validactions(self):
-        if self.metadata_stage['stage_names'][self.stage] in ["fixation"]:
-            self.valid_actions = [0]
-        elif self.metadata_stage['stage_names'][self.stage] in ["stage1"]:
-            self.valid_actions = [1,2]
-        elif self.metadata_stage['stage_names'][self.stage] in ["stage2"]:
-            self.valid_actions = None
+        if np.random.rand() < self._param_block['p_ambiguity']:
+            planet = np.random.choice(2,1)[0]
+        else:
+            planet = None
+        self._param_trial.update({'transition':trans.astype(int), 'rewardplanet':r, 'randomplanet': planet})
+                                      
+    def custom_step_reward(self, action):
+        reward = 0
+        if self._param_state['names'][self._state] == "stage1":
+            self._env_vars['spaceship'] = action
+            self._env_vars['planet'] = self._param_trial['transition'][self._env_vars['spaceship']]
+            reward += self._param_trial['rewardplanet'][self._env_vars['planet']]
+        return reward
 
-    def _draw_obs(self):
-        if self.metadata_stage['stage_names'][self.stage] == "fixation":
-            self.draw("fixation",1)
-        elif self.metadata_stage['stage_names'][self.stage] == "stage1":
-            self.draw('planet0', 1)
-        elif self.metadata_stage['stage_names'][self.stage] == "stage2":
-            if self.planet == 0:
-                self.draw('planet1',1)
-            elif self.planet == 1:
-                self.draw('planet2',1)
+    def draw_observation(self):
+        if self._env_vars['planet'] is None:
+            self.draw_onehot('planet0', 1)
+        else:
+            if self._param_trial['randomplanet'] is not None:
+                planet = self._param_trial['randomplanet']
+            else:
+                planet = self._env_vars['planet']
+            if planet == 0:
+                self.draw_onehot('planet1',1)
+            elif planet == 1:
+                self.draw_onehot('planet2',1)
         self.flip()
+
+    def setup_render_parameters(self):        
+        plottypes = ["circle", "circle", "circle"]
+        colors = [(100,100,100), (0,255,0), (0,0,255)]
+        radius = [0.25, 0.25, 0.25]
+        position = [None, None, None]
+        self._render_set_auto_parameters('obs', plottypes, colors, radius, position)
+        plottypes = ["action_binary"]
+        self._render_set_auto_parameters('action', plottypes, additional_params = [0, 1])
+        self.setup_human_keys_auto('binary')
+

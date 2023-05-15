@@ -1,89 +1,72 @@
-from W_Env.task_Goal_Action import task_Goal_Action
-from W_Env.task_goal_action_4frame import task_MC_4frame
-from W_Env.task_Temporal_Discounting import task_Temporal_Discounting
-from W_Env.task_Horizon import task_Horizon
-from W_Env.task_TwoStep import task_TwoStep
-from W_Env.task_TwoStep_Confidence import task_TwoStep_Confidence
-from W_Env.task_TwoStep_simple import task_TwoStep_simple
-from W_Env.task_TwoStep_1frame import task_TwoStep_1frame
-from W_Env.task_TwoStep_Confidence_mini import task_TwoStep_Confidence_mini
-from W_Env.task_TwoStep_Confidence_2frame import task_TwoStep_Confidence_2frame
-from W_Env.task_TwoStep_Ambiguity_1frame import task_TwoStep_Ambiguity_1frame
-from W_Env.task_tokens import task_tokens
-# from W_Env.task_TwoStep_2frame_full import task_TwoStep_2frame_full
-from W_Gym.W_Gym_simulator import W_env_simulator
+import pygame
+from gym.wrappers import RecordVideo
+import numpy as np
 
-def W_Env(envname, *arg, **kwarg):
-    envnames  = ["MC", "MC4", \
-                 "WV", "Horizon", "TwoStep", "TwoStep_Confidence", \
-                 "TwoStep_simple","TwoStep_1frame", "TwoStep_Confidence_mini", \
-                 "TwoStep_Confidence_2frame", "TwoStep_2frame_full", 'TwoStep_Ambiguity_1frame', 'tokens']
-    fullnames = ["task_Goal_Action", "task_MC_4frame", \
-                 "task_Temporal_Discounting", "task_Horizon", \
-                 'task_TwoStep', 'task_TwoStep_Confidence', 'task_TwoStep_Confidence_mini', \
-                 'TwoStep_Confidence_2frame','task_TwoStep_2frame_full', 'task_TwoStep_Ambiguity_1frame', 'task_tokens']
-    if not envname in envnames:
-        raise Exception("env not defined")
-    if envname == "MC":
-        env = task_Goal_Action(*arg, **kwarg)
-    if envname == "WV":
-        env = task_Temporal_Discounting(*arg, **kwarg)
-    if envname == "Horizon":
-        env = task_Horizon(*arg, **kwarg)
-    if envname == "TwoStep":
-        env = task_TwoStep(*arg, **kwarg)    
-    if envname == "TwoStep_Confidence":
-        env = task_TwoStep_Confidence(*arg, **kwarg)
-    if envname == "TwoStep_simple":
-        env = task_TwoStep_simple(*arg, **kwarg)
-    if envname == "TwoStep_1frame":
-        env = task_TwoStep_1frame(*arg, **kwarg)
-    if envname == "TwoStep_Confidence_mini":
-        env = task_TwoStep_Confidence_mini(*arg, **kwarg)
-    if envname == "TwoStep_Confidence_2frame":
-        env = task_TwoStep_Confidence_2frame(*arg, **kwarg)
-    if envname == "TwoStep_Ambiguity_1frame":
-        env = task_TwoStep_Ambiguity_1frame(*arg, **kwarg)
-    if envname == "MC4":
-        env = task_MC_4frame(*arg, **kwarg)
-    if envname == "tokens":
-        env = task_tokens(*arg, **kwarg)
-    # if envname == "TwoStep_2frame_full":
-    #     env = task_TwoStep_2frame_full(*arg, **kwarg)
+def W_Env_creater(envname, *arg, **kwarg):
+    tsk_name = "task_" + envname
+    ldic = locals()
+    exec(f"from W_Env.{tsk_name} import {tsk_name} as W_tsk", globals(), ldic)
+    W_tsk = ldic['W_tsk']
+    env = W_tsk(*arg, **kwarg)
     return env
 
-class W_Env_player():
+class W_Env():
     env = None
+    envmode = None
+    envname = None
     player = None
-    def __init__(self, envname, *arg, **kwarg):
-        self.env = W_Env(envname, *arg, **kwarg)
+    def __init__(self, envname, mode_env = None, is_record = False, log_dir = './video', \
+                 *arg, **kwarg):
+        env = W_Env_creater(envname, *arg, **kwarg)
+        if is_record:
+            env = self.wrap_env(env, log_dir)
+        self.env = env
         self.envname = envname
+        self.envmode = mode_env
+        if self.envmode == "oracle_human":
+            self.env.set_human_keys(['space'], [0])
 
+    def wrap_env(self, env, log_dir):
+        env = RecordVideo(env, log_dir)
+        return env
+    
     def get_env(self):
         return self.env
     
-    def get_player(self):
-        if self.player is not None:
-            return self.player
-        player = W_env_simulator(self.env)
-        if self.envname in ["MC", "MC4", "tokens"]:
-            player.set_keys(keys = ['space', 'left', 'up', 'right','down'], actions = [0,1,2,3,4])
-        if self.envname == "WV":
-            player.set_keys(keys = ['space', 'a','b'], actions = [0,1,2])
-        if self.envname in ["Horizon", "TwoStep", "TwoStep_simple", "TwoStep_Confidence_2frame"]:
-            player.set_keys(keys = ['space', 'left', 'right'], actions = [0,1,2])
-        if self.envname in ["TwoStep_1frame", "TwoStep_Ambiguity_1frame"]:
-            player.set_keys(keys = ['left', 'right'], actions = [0,1])
-        if self.envname in ["TwoStep_Confidence"]:
-            player.set_keys(keys = ['space', 'left', 'right', 'up'], actions = [0,1,2,3])
-        if self.envname in ["TwoStep_Confidence_mini"]:
-            player.set_keys(keys = ['space', 'left', 'up', 'right','down'], actions = [4,0,2,1,3])
-        self.player = player
-        return player
-
-    def play(self, *arg, **kwarg):
-        if self.player is None:
-            self.get_player()
-        self.player.play(*arg, **kwarg)
+    def _get_human_keypress(self, mode = "human"):
+        assert self.env.human_key_action is not None
+        action = None
+        while action is None:
+            for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN:
+                    key = pygame.key.name(event.key)
+                    if key == "escape":
+                        self.env.render_close()
+                        return None
+                    elif key == "space" and mode == "oracle_human":
+                        action = self.env.get_oracle_action() 
+                    elif key in self.env.human_key_action['keys']:
+                        kid = np.where([key == i for i in self.env.human_key_action['keys']])[0][0]
+                        action = self.env.human_key_action['actions'][kid]
+        return action
+    
+    def _get_action(self, mode, model):
+        if mode == "model":
+            action = model.predict(obs)
+        elif mode == "random":
+            action = self.env.action_space.sample()
+        elif mode in ["human", "oracle_human"]:
+            action = self._get_human_keypress()
+        return action
+    
+    def play(self, mode = None, model = None):
+        env = self.env
+        obs = env.reset()
+        done = False
+        while not done:
+            action = self._get_action(mode, model)
+            if action is None:
+                return
+            obs, reward, done, timemark = env.step(action)        
 
     

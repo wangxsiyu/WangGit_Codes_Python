@@ -14,11 +14,12 @@ class W_Gym_task(gym.Env):
     # reward setting
     _param_rewards = {"R_error": -1, "R_reward": 1}
     # parameters for task, block and trial
-    _param_task = None
-    _param_block = None
-    _param_trial = None
+    _param_task = {}
+    _param_block = {}
+    _param_trial = {}
     _param_state = {'n': 0, 'names': None, 'timelimits': None, \
-                    'immediate_advance': None, 'transition_matrix': None} 
+                    'is_immediate_advance': None, 'is_terminating_state': None, \
+                    'matrix_transition': None} 
     # timing variables (unit ms)
     _time_unit = 1 # ms
     _time_task = 0 # time since task start 
@@ -31,6 +32,12 @@ class W_Gym_task(gym.Env):
     _count_task_trial = 0 # number of trials completed since task start
     # gym variables
     _obs = None # observation
+    _last_action = None
+    _last_reward = 0
+    _env_vars = {} # environment moment-by-moment variables
+    # draw observation
+    _next_screen = None # to draw next screen
+    _obs_channelID = None # input dimension vs name, for easy drawing
     # trial variables
     _trial_is_error = False
     # state variables
@@ -53,11 +60,45 @@ class W_Gym_task(gym.Env):
             self._param_gym['is_flatten_obs'] = True
         self._time_unit = dt
 
+    def setup_state_parameters(self, state_names, state_timelimits = None, \
+                    state_immediateadvance = None, \
+                    matrix_state_transition = "next", \
+                    terminating_state = None):
+        if self._param_gym['is_ITI'] and not "ITI" in state_names:
+            state_names.append("ITI")
+        self._param_state['names'] = state_names
+        self._param_state['n'] = len(self._param_state['names'])
+        # set time limits for each state
+        if state_timelimits is None:
+            state_timelimits = np.Inf * np.ones(self._param_state['n']) * self._time_unit
+        elif state_timelimits == "auto":
+            state_timelimits = np.ones(self._param_state['n']) * self._time_unit
+        self._param_state['timelimits'] = state_timelimits
+        # set state flag for advancing upon effective actions
+        c = np.zeros(self._param_state['n'])
+        if state_immediateadvance is not None:
+            tid = np.array([np.where([j == i for j in self._param_state['names']]) for i in iter(state_immediateadvance)]).squeeze()
+            c[tid] = 1
+        self._param_state['is_immediate_advance'] = c
+        # set state flag for terminating state
+        if terminating_state is None:
+            terminating_state = state_names[-1] # default to be last state
+        terminating_state = W.enlist(terminating_state)
+        c = np.zeros(self._param_state['n'])
+        tid = np.array([np.where([j == i for j in self._param_state['names']]) for i in iter(terminating_state)]).squeeze()
+        c[tid] = 1
+        self._param_state['is_terminating_state'] = c
+        # set state transition
+        # if matrix_state_transition == "next":
+        #     matrix_state_transition = np.zeros([self._param_state['n'], self._param_state['n']])
+        #     for i in range(1, self._param_state['n']):
+        #         matrix_state_transition[i-1, i] = 1
+        self._param_state['matrix_transition'] = matrix_state_transition 
+
     def setup_reward(self, **kwarg):
         W.W_dict_updateonly(self._param_rewards, kwarg)
 
     def reset(self):
-        self._param_task = None
         self._data_task = None
         self._time_task = 0
         self._count_block = 0
@@ -65,11 +106,17 @@ class W_Gym_task(gym.Env):
         if hasattr(self, 'custom_reset'):
             self.custom_reset()
         self._reset_block()
+        # draw new observation
+        if hasattr(self, 'draw_observation'):
+            self.draw_observation()
+        # render
+        if hasattr(self, 'render'):
+            self.render(option = ['obs', 'time'])
         obs = self._get_obs()
         return obs
     
     def _reset_block(self):
-        self._param_block = None
+        self._param_block = {}
         self._data_block = None
         self._count_block_trial = 0
         self._time_block = 0
@@ -78,7 +125,7 @@ class W_Gym_task(gym.Env):
         self._reset_trial()
 
     def _reset_trial(self):
-        self._param_trial = None
+        self._param_trial = {}
         self._data_trial = None
         self._time_trial = 0
         self._trial_is_error = False
@@ -95,9 +142,6 @@ class W_Gym_task(gym.Env):
         # set valid actions for the new state
         if hasattr(self, 'custom_step_set_validactions'):
             self.custom_step_set_validactions()
-        # draw new observation
-        if hasattr(self, 'draw_observation'):
-            self.draw_observation(self._param_state['names'][self._state])
 
     def _check_validactions(self, action, valid_actions = None):
         if valid_actions is None:
@@ -118,7 +162,7 @@ class W_Gym_task(gym.Env):
         return is_done
     
     def _advance_trial(self):
-        id_done = False
+        is_done = False
         self._count_block_trial += 1
         self._count_task_trial += 1
         if self._count_task_trial >= self._param_gym['n_maxTrials']:
@@ -128,6 +172,7 @@ class W_Gym_task(gym.Env):
                 is_done = is_done or self._advance_block()
             else:
                 self._reset_trial()
+        return is_done
 
     def _advance_block(self):
         is_done = False
@@ -139,6 +184,7 @@ class W_Gym_task(gym.Env):
         return is_done
 
     def _abort(self):
+        is_done = False
         self._trial_is_error = True
         reward = self._param_rewards['R_error']
         if "ITI" in self._param_state['names']:
@@ -154,18 +200,18 @@ class W_Gym_task(gym.Env):
     def _get_state_ID(self, statename):
         return np.where([j == statename for j in self._param_state['names']])[0][0]
 
-    def step(self, action):
+    def step(self, action_motor, is_record = True, render_options = ["obs","action","reward","time"]):
         reward = 0
         # advance time
         is_done = self._advance_time()
         # transform actions
         if hasattr(self, "transform_actions"):
-            action = self.transform_actions(action)
+            action = self.transform_actions(action_motor)
+        else:
+            action = action_motor
         # check valid actions
         is_error = not self._check_validactions(action, self._state_valid_actions)
         is_effective = self._check_validactions(action, self._state_effective_actions)
-        # record current action
-        self._record({'action': action, 'is_error': is_error})
         # get consequences of actions (reward)
         if not is_error and hasattr(self, 'custom_step_reward'):
             treward = self.custom_step_reward(action)
@@ -174,7 +220,7 @@ class W_Gym_task(gym.Env):
         # determine if state-transition occurs
         is_transition = False
         if not is_error:
-            if self._param_state['immediate_advance'][self._state] == 1 and is_effective:
+            if self._param_state['is_immediate_advance'][self._state] == 1 and is_effective:
                 is_transition = True
             if self._time_state >= self._param_state['timelimits'][self._state]:
                 is_transition = True
@@ -189,10 +235,46 @@ class W_Gym_task(gym.Env):
         if hasattr(self, 'custom_step_reward_newstate'):
             treward = self.custom_step_reward_newstate(action)
             reward += treward
-        self._record({'reward': reward})
-        obs = self._get_obs()
+        
+        # recursive component: may take multiple steps (collapse some states)
+        if self._param_state['timelimits'][self._state] == 0:
+            _, treward, t_is_done = self.step(action_motor, is_record = False, \
+                                              render_options = None)
+            reward += treward
+            is_done = is_done or t_is_done
+        
+        self._last_action = action
+        self._last_reward = reward
+        # record current action
+        if is_record:
+            self._record({'action': action, 'is_error': is_error, 'reward': reward})
+        # draw new observation
+        if hasattr(self, 'draw_observation'):
+            self.draw_observation()
+        # render
+        if hasattr(self, 'render'):
+            obs_renderer = self.render(option = render_options)
+        if hasattr(self, 'metadata_render') and self.metadata_render['render_mode'] == "rgb_array":
+            obs = obs_renderer
+        else:
+            obs = self._get_obs()
         return obs, reward, is_done, self._time_task
 
+    def _state_transition(self):
+        reward = 0
+        is_done = False
+        if self._param_state['is_terminating_state'][self._state]:
+            is_done = self._advance_trial()
+        else:
+            if hasattr(self, 'custom_state_transition'):
+                self._state = self.custom_state_transition()
+            elif self._param_state['matrix_transition'] == "next":
+                self._state += 1
+            else:
+                transprob = self._param_state['matrix_transition'][self._state]
+                self._state = np.random.choice(np.arange(0, self._param_state['n']), 1, p=transprob)
+        return reward, is_done
+    
     def get_probabilistic_reward(self, p):
         if np.random.uniform() <= p:
             reward = self._param_rewards['R_reward']
@@ -200,47 +282,67 @@ class W_Gym_task(gym.Env):
             reward = 0
         return reward
 
+    def _get_obs(self):
+        option_augment_obs = self._param_gym['option_augment_obs']
+        obs = self._obs.flatten() if self._param_gym['is_flatten_obs'] else self._obs
+        if option_augment_obs is not None:
+            for opt_name in iter(option_augment_obs):
+                if opt_name == "action": 
+                    tval = self._get_action_onehot(self._last_action)
+                elif opt_name == "reward":
+                    tval = np.array(self._last_reward)
+                    tval = tval.reshape((1,))
+                obs = np.concatenate((obs, tval))
+        return obs
+    
+    def _get_action_onehot(self, action):
+        n = self.get_n_actions()
+        action_onehot = np.zeros(n)
+        if action is not None:
+            action_onehot[action] = 1
+        return action_onehot
+    
+    def get_n_actions(self):
+        return self.action_space.n
+
+    def get_n_obs(self, is_count_augmented_dimensions = True):
+        if self.observation_space.shape == ():
+            len = self.observation_space.n
+        else:
+            len = self.observation_space.shape
+        if is_count_augmented_dimensions and self._param_gym['option_augment_obs'] is not None:
+            for opt_name in iter(self._param_gym['option_augment_obs']):
+                if opt_name == "action": 
+                    len += self.get_n_actions()
+                elif opt_name == "reward":
+                    len += 1
+        return len                
+
+    def flip(self, is_clear = True):
+        self._obs = self._next_screen
+        if is_clear:
+            self.blankscreen()
+
+    def blankscreen(self):
+        assert hasattr(self, 'observation_space')
+        self._next_screen = np.zeros(self.get_n_obs(is_count_augmented_dimensions=False))
+
+    # draw obs
+    def draw_onehot(self, channelname, val):
+        if self._next_screen is None:
+            self.blankscreen()
+        if channelname == "ITI":
+            return
+        assert self._obs_channelID is not None
+        idx = self._obs_channelID[channelname]
+        self._next_screen[idx] = val
+
+    def setup_obs_channelID(self, mydict):
+        self._obs_channelID = mydict
+    
     def _record(self, datadict):
         pass
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    def _get_obs(self, option_augment_obs = None):
-        if option_augment_obs is None:
-            option_augment_obs = self._param_gym['option_augment_obs']
-
-        if self.is_faltten_obs or self.is_augment_obs:
-            obs = self.obs.flatten()
-        else:
-            obs = self.obs
-        if (is_augment is None and self.is_augment_obs) or is_augment:
-            action = self._action_flattened()
-            r = np.array(self.last_reward)
-            r = r.reshape((1,))
-            obs = np.concatenate((obs, r, action))
-        return obs
     
 
 
@@ -249,40 +351,7 @@ class W_Gym_task(gym.Env):
 
 
 
-
-    def setup_stagenames(self, state_names, state_timelimits = None, \
-                   state_immediateadvance = None):
-        if self._param_task['is_ITI'] and not "ITI" in state_names:
-            state_names.append("ITI")
-        self._param_state['names'] = state_names
-        self._param_state['n'] = len(self._param_state['names'])
-        if state_timelimits is None:
-            state_timelimits = np.Inf * np.ones(self._param_state['n']) * self._time_unit
-        elif state_timelimits == "auto":
-            state_timelimits = np.ones(self._param_state['n']) * self._time_unit
-        self._param_state['timelimits'] = state_timelimits
-        c = np.zeros(self._param_state['n'])
-        if state_immediateadvance is not None:
-            tid = np.array([np.where([j == i for j in self._param_state['names']]) for i in iter(state_immediateadvance)]).squeeze()
-            c[tid] = 1
-        self._param_state['immediate_advance'] = c
-
-    def setup_autostatetransitions(self):
-        pass
-
-
-
-
-
-
     
-    def _state_transition(self):
-        is_error = self._state_transition_auto()
-        if not is_error:
-            reward = self._param_rewards['R_advance']
-            self.timer = 0 # auto reset timer
-            if self.stage == len(self.metadata_stage['stage_names']):
-                is_nexttrial = 1
 
 
     
