@@ -25,11 +25,16 @@ class task_TwoStep(W_Gym):
         state_immediateadvance = ["stage1"]
         self.setup_state_parameters(state_names=state_names, state_immediateadvance=state_immediateadvance)
 
+    def get_savename(self):
+        tstr = 'T' if self._param_task['is_random_common0'] else 'F'
+        return f"pR{self._param_task['ps_high_state']*100:.0f}_pSR{self._param_task['p_switch_reward']*1000:.0f}_pT{self._param_task['ps_common_trans']*100:.0f}_pST{self._param_task['p_switch_transition']*1000:.0f}_PST0{tstr}_pA{self._param_task['ps_ambiguity']*100:.0f}"
+
     def custom_reset_block(self):
         p = random.sample(W.enlist(self._param_task['ps_common_trans']),1)[0]
         if self._param_task['is_random_common0'] and np.random.rand() < 0.5:
             p = 1 - p
         self._env_vars['p_trans'] = [p,p]
+        self._env_vars['dominant_trans'] = 1 if p > 0.5 else 2
         self._env_vars['high_state'] = np.random.choice(2,1)[0]
 
         tid = np.random.choice(len(W.enlist(self._param_task['ps_high_state'])),1)[0]
@@ -52,6 +57,7 @@ class task_TwoStep(W_Gym):
             self._env_vars['high_state']  = 1- self._env_vars['high_state'] 
         if np.random.rand() < self._param_task['p_switch_transition']: # flip transition
             self._env_vars['p_trans'] = [1 - x for x in self._env_vars['p_trans']]
+            self._env_vars['dominant_trans'] = 3 - self._env_vars['dominant_trans']
         r_high = np.array(np.random.rand() < self._param_block['p_reward_high']).astype(int)
         r_low = np.array(np.random.rand() < self._param_block['p_reward_low']).astype(int)
         r = np.zeros(2)

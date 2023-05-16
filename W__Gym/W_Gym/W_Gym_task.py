@@ -8,7 +8,8 @@ class W_Gym_task(gym.Env):
     It implements a class of episodic task consists of blocks, trials, states and steps
     """
     # gym parameters
-    _param_gym = {"n_maxTime": np.Inf, "n_maxTrials": np.Inf, "n_maxBlocks": np.Inf, \
+    _param_gym = {"n_maxTime_reset": None, "n_maxTrials_reset": None, "n_maxBlocks_reset": None, \
+                  "n_maxTime": np.Inf, "n_maxTrials": np.Inf, "n_maxBlocks": np.Inf, \
                     "block_n_maxTrials": np.Inf, \
                     "option_augment_obs": ["action", "reward"], \
                     "is_flatten_obs": True, "is_ITI": True}
@@ -51,18 +52,27 @@ class W_Gym_task(gym.Env):
     _data = None
     
     def __init__(self, n_maxTime = np.Inf, n_maxTrials = np.Inf, n_maxBlocks = np.Inf, \
-                    block_n_maxTrials = np.Inf, option_augment_obs = ["action", "reward"], \
+                    n_maxTime_reset = None, n_maxTrials_reset = None, n_maxBlocks_reset = None, \
+                    block_n_maxTrials = np.Inf, option_augment_obs = ["reward", "action"], \
                     is_flatten_obs = True, is_ITI = True, dt = 1, is_save = False, is_save_table = True, *arg, **kwarg):
-        super().__init__(*arg, **kwarg)
         _param_inputs = W.W_dict_kwargs()
         W.W_dict_updateonly(self._param_gym, _param_inputs)
+        self._param_gym_reset = ['n_maxTime', 'n_maxTrials', 'n_maxBlocks']
         if self._param_gym['option_augment_obs'] is not None:
             self._param_gym['is_flatten_obs'] = True
         self._time_unit = dt
         self._data_issave = is_save
         self._data_istable = is_save_table
-        if self._data_issave:
-            self._data = None if self._data_istable else  {'task': None, 'block': None, 'trial': None, 'data': None}
+        self._reset_task()
+
+    def _param_gym_reset_update(self):
+        for i in self._param_gym_reset:
+            i_next = i + '_reset'
+            if self._param_gym[i_next] is not None:
+                if self._param_gym[i] == np.Inf:
+                    self._param_gym[i] = self._param_gym[i_next]
+                else:
+                    self._param_gym[i] += self._param_gym[i_next]
 
     def setup_state_parameters(self, state_names, state_timelimits = None, \
                     state_immediateadvance = None, \
@@ -102,13 +112,30 @@ class W_Gym_task(gym.Env):
     def setup_reward(self, **kwarg):
         W.W_dict_updateonly(self._param_rewards, kwarg)
 
-    def reset(self):
+    def saveon(self):
+        self._data_issave = True
+        if self._data is None:
+            self._data_initialize()
+
+    def _data_initialize(self):
+        self._data = None if self._data_istable else  {'task': None, 'block': None, 'trial': None, 'data': None}
+
+    def _reset_task(self):
         self._time_task = 0
         self._count_block = 0
-        self._task_trial = 0
+        self._count_task_trial = 0
+        if self._data_issave:
+            self._data_initialize()
         if hasattr(self, 'custom_reset'):
             self.custom_reset()
         self._record('task', self._param_task)
+
+    def reset(self, reset_task = True, clear_data = True):
+        if reset_task:
+            self._reset_task()
+        elif clear_data:
+            self._data_initialize()
+        self._param_gym_reset_update()
         self._reset_block()
         # draw new observation
         if hasattr(self, 'draw_observation'):
@@ -167,23 +194,21 @@ class W_Gym_task(gym.Env):
     
     def _advance_trial(self):
         is_done = False
-        self._count_block_trial += 1
         self._count_task_trial += 1
         if self._count_task_trial >= self._param_gym['n_maxTrials']:
             is_done = True
-        else:
-            if self._count_block_trial >= self._param_gym['block_n_maxTrials']:
-                is_done = is_done or self._advance_block()
-            else:
-                self._reset_trial()
+        self._count_block_trial += 1
+        if self._count_block_trial >= self._param_gym['block_n_maxTrials']:
+            is_done = self._advance_block(is_done)
+        if not is_done:
+            self._reset_trial()
         return is_done
 
-    def _advance_block(self):
-        is_done = False
+    def _advance_block(self, is_done = False):
         self._count_block += 1
         if self._count_block >= self._param_gym['n_maxBlocks']:
             is_done = True
-        else:
+        if not is_done:
             self._reset_block()
         return is_done
 
@@ -208,7 +233,9 @@ class W_Gym_task(gym.Env):
         reward = 0
         # advance time
         is_done = self._advance_time()
-        tdata = {'time_task': self._time_task, 'time_trial': self._time_trial, 'state': self._param_state['names'][self._state], 'obs': self.format_obs_for_save(self._obs)}
+        tdata = {'time_task': self._time_task, 'time_trial': self._time_trial, 'state': self._param_state['names'][self._state], 'obs': self.format_obs_for_save(self._obs), \
+                 'count_trial': self._count_block_trial, 'count_block': self._count_block}
+        tdata.update(self._env_vars)
         # transform actions
         if hasattr(self, "transform_actions"):
             action = self.transform_actions(action_motor)
