@@ -233,9 +233,15 @@ class W_Gym_task(gym.Env):
         reward = 0
         # advance time
         is_done = self._advance_time()
-        tdata = {'time_task': self._time_task, 'time_trial': self._time_trial, 'state': self._param_state['names'][self._state], 'obs': self.format_obs_for_save(self._obs), \
+        tdata = {'time_task': self._time_task, 'time_trial': self._time_trial, \
+                 'state': self._param_state['names'][self._state], \
+                 'obs': self.format_obs_for_save(self._obs), \
                  'count_trial': self._count_block_trial, 'count_block': self._count_block}
         tdata.update(self._env_vars)
+        if self._data_istable:
+            tdata.update(self._param_trial)
+            tdata.update(self._param_block)
+            tdata.update(self._param_task)
         # transform actions
         if hasattr(self, "transform_actions"):
             action = self.transform_actions(action_motor)
@@ -382,9 +388,6 @@ class W_Gym_task(gym.Env):
         if self._data_istable and not datatype == "data":
             return
         if self._data_istable: # must have datatype == "data"
-            datadict.update(self._param_trial)
-            datadict.update(self._param_block)
-            datadict.update(self._param_task)
             df = self._data 
             if df is None:
                 df = pd.DataFrame()
