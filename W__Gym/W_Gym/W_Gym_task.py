@@ -1,4 +1,4 @@
-from W_Python import W_tools as W
+from W_Python.W import W
 import numpy as np
 import gym
 import pandas as pd
@@ -7,21 +7,23 @@ class W_Gym_task(gym.Env):
     """
     It implements a class of episodic task consists of blocks, trials, states and steps
     """
-    # gym parameters
-    _param_gym = {"n_maxTime_reset": None, "n_maxTrials_reset": None, "n_maxBlocks_reset": None, \
+    # meta parameters
+    # gym variables - "n_maxT_reset" is maxT since each reset
+    _metadata_gym = {"n_maxTime_reset": None, "n_maxTrials_reset": None, "n_maxBlocks_reset": None, \
                   "n_maxTime": np.Inf, "n_maxTrials": np.Inf, "n_maxBlocks": np.Inf, \
                     "block_n_maxTrials": np.Inf, \
                     "option_augment_obs": ["action", "reward"], \
                     "is_flatten_obs": True, "is_ITI": True}
+    # state variables
+    _metadata_state = {'n': 0, 'names': None, 'timelimits': None, \
+                    'is_immediate_advance': None, 'is_terminating_state': None, \
+                    'matrix_transition': None} 
     # reward setting
     _param_rewards = {"R_error": -1, "R_reward": 1}
     # parameters for task, block and trial
     _param_task = {}
     _param_block = {}
     _param_trial = {}
-    _param_state = {'n': 0, 'names': None, 'timelimits': None, \
-                    'is_immediate_advance': None, 'is_terminating_state': None, \
-                    'matrix_transition': None} 
     # timing variables (unit ms)
     _time_unit = 1 # ms
     _time_task = 0 # time since task start 
