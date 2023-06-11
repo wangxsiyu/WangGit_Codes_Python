@@ -14,4 +14,7 @@ class W_tools():
         return dct
 
     def W_onehot(x, n):
-        return np.squeeze(np.eye(n)[x])
+        if x is None:
+            return np.zeros(n)
+        else:
+            return np.squeeze(np.eye(n)[x])

@@ -1,5 +1,5 @@
 from W_Gym.W_Gym import W_Gym
-from W_Python import W_tools as W
+from W_Python.W import W
 from gym import spaces
 import random
 import numpy as np
@@ -11,34 +11,41 @@ class task_TwoStep(W_Gym):
                   'is_random_common0': False, \
                   }
     
-    def __init__(self, *arg, **kwarg):
-        super().__init__(is_ITI = False, *arg, **kwarg)
+    def __init__(self, is_ITI = False, *arg, **kwarg):
+        super().__init__(is_ITI = is_ITI, *arg, **kwarg)
+        self.env_name = "TwoStep"
         self._param_task = W.W_dict_updateonly(self._param_task, kwarg)
         # observation space
         self.observation_space = spaces.Discrete(3) # state 0, state 1, state 2
         # set action space
         self.action_space = spaces.Discrete(2) # shuttle 1, shuttle 2
         # set rendering dimension names
-        self.setup_obs_channelID({'planet0':0, 'planet1':1, 'planet2':2})
+        self.setup_obs_channel_namedict({'planet0':0, 'planet1':1, 'planet2':2})
         # set stages
         state_names = ["stage1"]
         state_immediateadvance = ["stage1"]
         self.setup_state_parameters(state_names=state_names, state_immediateadvance=state_immediateadvance)
+        self.setup_human_keys_auto('binary')
 
-    def get_savename(self):
-        tstr = 'T' if self._param_task['is_random_common0'] else 'F'
-        return f"pR{self._param_task['ps_high_state']*100:.0f}_pSR{self._param_task['p_switch_reward']*1000:.0f}_pT{self._param_task['ps_common_trans']*100:.0f}_pST{self._param_task['p_switch_transition']*1000:.0f}_PST0{tstr}_pA{self._param_task['ps_ambiguity']*100:.0f}"
+    def custom_savename(self):
+        pST0 = 'T' if self._param_task['is_random_common0'] else 'F'
+        R = W.W_str_numbers_separated_by_underscore(self._param_task['ps_high_state']*100)
+        SR = self._param_task['p_switch_reward']*1000
+        pT = W.W_str_numbers_separated_by_underscore(self._param_task['ps_common_trans']*100)
+        pST = self._param_task['p_switch_transition']*1000
+        A = W.W_str_numbers_separated_by_underscore(self._param_task['ps_ambiguity']*100)
+        return f"pR{R:.0f}_pSR{SR:.0f}_pT{pT:.0f}_pST{pST:.0f}{pST0}_pA{A:.0f}"
 
     def custom_reset_block(self):
-        p = random.sample(W.enlist(self._param_task['ps_common_trans']),1)[0]
+        p = random.sample(W.W_enlist(self._param_task['ps_common_trans']),1)[0]
         if self._param_task['is_random_common0'] and np.random.rand() < 0.5:
             p = 1 - p
         self._env_vars['p_trans'] = [p,p]
         self._env_vars['dominant_trans'] = 1 if p > 0.5 else 2
         self._env_vars['high_state'] = np.random.choice(2,1)[0]
 
-        tid = np.random.choice(len(W.enlist(self._param_task['ps_high_state'])),1)[0]
-        p = W.enlist(self._param_task['ps_high_state'])[tid]
+        tid = np.random.choice(len(W.W_enlist(self._param_task['ps_high_state'])),1)[0]
+        p = W.W_enlist(self._param_task['ps_high_state'])[tid]
         
         self._param_block['p_reward_high'] = p
 
@@ -48,7 +55,7 @@ class task_TwoStep(W_Gym):
             p = self._param_task['ps_low_state'][tid]
         self._param_block['p_reward_low'] = p
 
-        p = random.sample(W.enlist(self._param_task['ps_ambiguity']),1)[0]
+        p = random.sample(W.W_enlist(self._param_task['ps_ambiguity']),1)[0]
         self._param_block['p_ambiguity'] = p
         self._env_vars['planet'] = None
     
@@ -79,7 +86,7 @@ class task_TwoStep(W_Gym):
                                       
     def custom_step_reward(self, action):
         reward = 0
-        if self._param_state['names'][self._state] == "stage1":
+        if self._metadata_state['statenames'][self._state] == "stage1":
             self._env_vars['spaceship'] = action
             self._env_vars['planet'] = self._param_trial['transition'][self._env_vars['spaceship']]
             reward += self._param_trial['rewardplanet'][self._env_vars['planet']]
@@ -106,8 +113,7 @@ class task_TwoStep(W_Gym):
         position = [None, None, None]
         self._render_set_auto_parameters('obs', plottypes, colors, radius, position)
         plottypes = ["action_binary"]
-        self._render_set_auto_parameters('action', plottypes, additional_params = [0, 1])
-        self.setup_human_keys_auto('binary')
+        self._render_set_auto_parameters('action', plottypes)
 
     def format_obs_for_save(self, obs):
         return np.sum(obs * np.array([0,1,2]))

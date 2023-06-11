@@ -14,6 +14,6 @@ class W_dict():
         dict1.update((k, dict2[k]) for k in dict1.keys() & dict2.keys())
         return dict1
 
-    def W_dict_deleteNone(**kwargs):
-        dict1 = dict((k,v) for k,v in kwargs.items() if v is not None)
+    def W_dict_deleteNone(dict1):
+        dict1 = dict((k,v) for k,v in dict1.items() if v is not None)
         return dict1
