@@ -1,38 +1,4 @@
-
 import torch
-from tqdm import tqdm 
-import pandas as pd
-
-    def record(self, model, savename, n_episode = 1, showprogress = True, *arg, **kwarg):
-        rg = range(n_episode)
-        if showprogress:
-            rg = tqdm(rg)
-        recordings = []
-        behaviors = []
-        for i in rg:
-            behavior, recording = self.run_episode(model, record = True, *arg, **kwarg)
-            behaviors.append(behavior)
-            recordings.append(recording)
-        behaviors = pd.concat(behaviors)
-        recordings = torch.concat(recordings).numpy()
-        recordings = pd.DataFrame(recordings)
-        if savename is not None:
-            behaviors.to_csv(savename)
-            recordings.to_csv(savename.replace('data_', 'recordings_'))
-        if behaviors.shape[0] == recordings.shape[0]:
-            print(f"recording complete: format check passed.")
-        return behaviors, recordings
-
-    
-
-
-    def select_action(self, action_vector, mode_action):
-        if mode_action == "softmax":
-            action_dist = torch.nn.functional.softmax(action_vector, dim = -1)
-            action_cat = torch.distributions.Categorical(action_dist.squeeze())
-            action = action_cat.sample()
-        return action
-
 from collections import namedtuple 
 import numpy as np
 import random
@@ -95,7 +61,18 @@ class W_Buffer:
         d = self.tuple(*d)
         return d
 
-   
+class W_Worker:
+    def __init__(self, env, model, device = None, *arg, **kwarg):
+        if device is None:
+            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            print(f"enabling {self.device}")
+        else:
+            self.device = device
+        self.env = env
+        self.model = model
+        Memory = namedtuple('Memory', ('obs', 'action', 'reward', 'timestep', 'done'))
+        self.memory = W_Buffer(Memory, device = device, *arg, **kwarg)
+        # self.set_mode(*arg, **kwarg)
 
     def set_mode(self, mode_worker = "Test"):
         self.mode_worker = mode_worker

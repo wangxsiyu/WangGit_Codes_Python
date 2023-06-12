@@ -1,20 +1,21 @@
-from gym import spaces
 from W_Gym.W_Gym import W_Gym
-from W_Python import W_tools as W
+from W_Python.W import W
+from gym import spaces
 import numpy as np
 
-class task_Temporal_Discounting(W_Gym):
-    def __init__(self, *arg, **kwarg):
-        super().__init__(*arg, **kwarg)
-        self.observation_space = spaces.Discrete(13) # 1 + 9 + 1 + 1 + 1
+class task_WV(W_Gym):
+    def __init__(self, is_ITI = False, *arg, **kwarg):
+        super().__init__(is_ITI = is_ITI, *arg, **kwarg)
+        self.env_name = "WV"
+        self._param_task = W.W_dict_updateonly(self._param_task, kwarg)
+        self.observation_space = spaces.Discrete(12) # 9 cues + 1 red + 1 purple + 1 green
         # set action space
-        self.action_space = spaces.Discrete(3) # fix, release, hold
+        self.action_space = spaces.Discrete(2) # release, hold
         # set rendering dimension names
-        self.setup_obs_Name2DimNumber({'fixation':0, \
-                                       'image':np.arange(1,10).tolist(), 'red':10, 'purple':11, \
-                                        'green':12})
+        self.setup_obs_channel_namedict({'image':np.arange(9).tolist(), 'red':9, 'purple':10, \
+                                        'green':11})
         # set stages
-        stage_names = ["fixation", "image", "red", \
+        stage_names = ["image", "red", \
                        "purple", "purple_overtime", "green"]
         stage_advanceuponaction = ["red", "purple"]
         self.setW_stage(stage_names = stage_names, stage_advanceuponaction = stage_advanceuponaction, \
