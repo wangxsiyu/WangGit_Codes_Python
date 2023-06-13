@@ -1,10 +1,10 @@
 import torch
 
 class W_Worker:
-    def __init__(self, env, model, recording_mode = "state_action", *arg, **kwarg):
+    def __init__(self, env, model, recording_mode = "state-action", *arg, **kwarg):
         self.env = env
         self.model = model
-        self.recording_mode = recording_mode # state_action, behaviors, neurons 
+        self.recording_mode = recording_mode # state-action, behavior, neurons 
        
     def run_episode(self, device = "cpu", mode_action = "softmax"):
             model = self.model
@@ -15,13 +15,13 @@ class W_Worker:
 
             done = False
             total_reward = 0
-            if isrecord:
+            if recording_mode in ["behavior", "neurons"]:
                 env.saveon()
+            if recording_mode == "neurons":
+                recording_neurons = []
             obs = env.reset()
 
             mem_state = None
-            if isrecord:
-                recording_neurons = []
             while not done:
                 # take actions
                 obs = torch.from_numpy(obs).unsqueeze(0).float()
@@ -35,4 +35,11 @@ class W_Worker:
                 total_reward += reward
             if record:
                 recording_neurons = torch.concat(recording_neurons).squeeze()
+
+            if recording_mode == "neurons":
+                return (env._data, recording_neurons)
+            elif recording_mode == "behavior":
+                return env._data
+            elif recording_mode == "state-action":
+                return 
             return env._data, recording_neurons if record else total_reward
