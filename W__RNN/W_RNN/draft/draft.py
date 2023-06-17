@@ -1,38 +1,3 @@
-
-import torch
-from tqdm import tqdm 
-import pandas as pd
-
-    def record(self, model, savename, n_episode = 1, showprogress = True, *arg, **kwarg):
-        rg = range(n_episode)
-        if showprogress:
-            rg = tqdm(rg)
-        recordings = []
-        behaviors = []
-        for i in rg:
-            behavior, recording = self.run_episode(model, record = True, *arg, **kwarg)
-            behaviors.append(behavior)
-            recordings.append(recording)
-        behaviors = pd.concat(behaviors)
-        recordings = torch.concat(recordings).numpy()
-        recordings = pd.DataFrame(recordings)
-        if savename is not None:
-            behaviors.to_csv(savename)
-            recordings.to_csv(savename.replace('data_', 'recordings_'))
-        if behaviors.shape[0] == recordings.shape[0]:
-            print(f"recording complete: format check passed.")
-        return behaviors, recordings
-
-    
-
-
-    def select_action(self, action_vector, mode_action):
-        if mode_action == "softmax":
-            action_dist = torch.nn.functional.softmax(action_vector, dim = -1)
-            action_cat = torch.distributions.Categorical(action_dist.squeeze())
-            action = action_cat.sample()
-        return action
-
 from collections import namedtuple 
 import numpy as np
 import random
@@ -97,55 +62,12 @@ class W_Buffer:
 
    
 
-    def set_mode(self, mode_worker = "Test"):
-        self.mode_worker = mode_worker
-
-    def select_action(self, action_vector, mode_action):
-        if mode_action == "softmax":
-            action_dist = torch.nn.functional.softmax(action_vector, dim = -1)
-            action_cat = torch.distributions.Categorical(action_dist.squeeze())
-            action = action_cat.sample()
-        return action
-
-    def run_episode(self, mode_action = "softmax", is_test = False, record = False):
-        if self.model is not None:
-            self.model.eval()
-        done = False
-        total_reward = 0
-        obs = self.env.reset()
-        mem_state = None
-        if not is_test:
-            self.memory.clear()
-        recording = []
-        while not done:
-            # take actions
-            obs = torch.from_numpy(obs).unsqueeze(0).float()
-            if self.model is not None:
-                action_vector, val_estimate, mem_state = self.model(obs.unsqueeze(0).to(self.device), mem_state)
-                action = self.select_action(action_vector, mode_action)
-            elif mode_action == "oracle":            
-                action = torch.tensor(self.env.get_oracle_action(), dtype = torch.int64)
-            if record:
-                recording.append(mem_state[0])
-            obs_new, reward, done, timestep, _ = self.env.step(action.item())
-            reward = float(reward)
             
             if not is_test:
                 action_onehot = torch.nn.functional.one_hot(action, self.env.action_space.n)
                 action_onehot = action_onehot.unsqueeze(0).float()
                 self.memory.add(obs.to('cpu').numpy(), action_onehot.to('cpu').numpy(), [reward], [timestep], [done])
             
-            obs = obs_new
-            total_reward += reward
-        if record:
-            recording = torch.concat(recording).squeeze()
-       
-        if not is_test:
-            self.memory.push()
-        if is_test:
-            return self.env.format4save(), recording
-        else:
-            return total_reward, self.env._get_info()
 
     def run_episode_outputlayer(self, buffer, safeoption = 'all'):
         self.model.train()
@@ -162,36 +84,7 @@ class W_Buffer:
         tb = namedtuple('TrainingBuffer', ("action_dist","value", "action_likelihood"))
         return tb(action_dist, val_estimate, action_likelihood)
         
-    def run_worker(self, nrep = 1, showprogress = False, savename = None, *arg, **kwarg):
-        # W.W_tic()
-        rs = []
-        rg = range(nrep)
-        if showprogress:
-            rg = tqdm(rg)
-        info = []
-        for i in rg:
-            r, lastinfo = self.run_episode(*arg, **kwarg)
-            # r.blockID = np.ones_like(r.blockID) * (i+1) 
-            rs.append(r)
-            # lastinfo.session
-            info.append(lastinfo)
-        # W.W_toc("worker time = ")
-        if savename is None:
-            return np.mean(rs), lastinfo
-        else:
-            d = pandas.concat(rs)
-            d.to_csv(savename)
-            if info is not None:
-                efs = torch.concat(info).numpy()
-                efs = pandas.DataFrame(efs)
-                efs.to_csv(savename.replace('data_', 'efs_'))
 
-    def run_oracle(self, nepisode, filename = None, *arg, **kwarg):
-        self.run_worker(nepisode, showprogress= True, mode_action = "oracle", *arg, **kwarg)
-        memory = self.memory.sample(mode_sample="all")
-        if filename is not None:
-            with open(filename, "wb") as f:
-                pickle.dump([memory.obs, memory.action, memory.reward, memory.timestep, memory.done], f)
 
         
     def loaddict_folder(self, currentfolder, is_resume = True):

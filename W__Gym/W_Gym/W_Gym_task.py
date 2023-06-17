@@ -120,6 +120,9 @@ class W_Gym_task(gym.Env):
         if self._data is None:
             self._data_initialize()
 
+    def saveoff(self):
+        self._data_issave = False
+
     def _data_initialize(self):
         self._data = None if self._data_istable else  {'task': None, 'block': None, 'trial': None, 'data': None}
 
