@@ -57,6 +57,7 @@ class W_Gym_task(gym.Env):
     def __init__(self, n_maxTime = np.Inf, n_maxTrials = np.Inf, n_maxBlocks = np.Inf, \
                     block_n_maxTrials = np.Inf, option_obs_augment = ["reward", "action"], \
                     option_obs_is_flatten = True, is_ITI = True, dt = 1, is_save = False, is_save_table = True, *arg, **kwarg):
+        self._param_task = W.W_dict_updateonly(self._param_task, kwarg)
         _param_inputs = W.W_dict_function_arguments()
         W.W_dict_updateonly(self._metadata_gym, _param_inputs)
         if self._metadata_gym['option_obs_augment'] is not None:
@@ -264,6 +265,8 @@ class W_Gym_task(gym.Env):
             treward, t_is_done = self._abort()
         elif is_transition:
             treward, t_is_done = self._state_transition()
+        else:
+            t_is_done = False
         reward += treward
         is_done = is_done or t_is_done
         # get consequences of actions (after possible state transition)
@@ -337,7 +340,10 @@ class W_Gym_task(gym.Env):
         return obs.flatten()
     
     def get_n_actions(self):
-        return self.action_space.n
+        if hasattr(self, '_n_actions'):
+            return self._n_actions
+        else:
+            return self.action_space.n
 
     def get_n_obs(self, is_count_augmented_dimensions = True):
         if self.observation_space.shape == ():

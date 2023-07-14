@@ -1,5 +1,4 @@
-from W_Gym.W_Gym import W_Gym
-import W_Python.W_tools as W
+from .W_Gym import W_Gym
 import numpy as np
 from gym import spaces
 
@@ -35,15 +34,15 @@ class grid2D():
         return x, y
     
 class W_Gym_grid2D(W_Gym):
-    plot_position = None
+    _n_actions = None
     def __init__(self, nx, ny, ndim_obs = 1, **kwarg):
         # ndim_obs is the dimension of observation (number of input channels)
         super().__init__(**kwarg)
         self.observation_space = spaces.Box(low = 0, high = 1, shape = (nx, ny, ndim_obs), dtype = np.int8)
-        self.obs = np.zeros(self.observation_space.shape)
+        self._obs = np.zeros(self.observation_space.shape)
         self.gaze = grid2D(0,nx-1,0,ny-1) # action object
-        self._action_dimension = nx * ny
-        self.plot_position = self.pos_grid(ny, nx) * self.metadata_render['window_size']
+        self._n_actions = nx * ny
+        self.plot_position = self.pos_grid(ny, nx) * self._metadata_render['window_size']
         
     def pos_grid(self, nx, ny):
         x = np.linspace(0, 1, nx, endpoint=False) + 1/nx/2
@@ -54,34 +53,13 @@ class W_Gym_grid2D(W_Gym):
         pos = np.moveaxis(pos, [0,1,2],[2,0,1])
         return pos
         
-    def draw(self, xy, channel_name):
-        if self.currentscreen is None:
+    def draw_onehot_2D(self, xy, channel_name):
+        if self._next_screen is None:
             self.blankscreen()
         x, y = xy
-        channelID = self.obs_Name2DimNumber[channel_name]
-        self.currentscreen[x, y, channelID] = 1
-
-    def _render_frame_grid2D(self, canvas, data, dictname, pointscale = 1):
-        import pygame
-        params = self.plot_params[dictname]
-        if len(data.shape) == 1:
-            data = self.one_hot_2D(data[0], data[1])
-        n_channel = data.shape[2]            
-        for ci in range(n_channel):
-            tcol = params['colors'][ci]
-            tplottype = params['plottypes'][ci]
-            tradius = params['radius'][ci]
-            for xi in range(self.observation_space.shape[0]):
-                for yi in range(self.observation_space.shape[1]):
-                    tval = data[xi, yi, ci]
-                    tpos = self.plot_position[xi, yi]
-                    if tval > 0: # show
-                        if tplottype == "circle":
-                            pygame.draw.circle(canvas, tcol, tpos, np.mean(tradius) * pointscale)
-                        elif tplottype == "square":
-                            pygame.draw.rect(canvas, tcol, 
-                                np.concatenate((-tradius + tpos, tradius * 2), axis = None), 0)
-        return canvas
+        assert self._obs_channel_namedict is not None
+        channelID = self._obs_channel_namedict[channel_name]
+        self._next_screen[x, y, channelID] = 1
             
     def one_hot_2D(self, x, y):
         data = np.zeros(self.observation_space.shape)
@@ -118,22 +96,44 @@ class W_Gym_grid2D(W_Gym):
         # dy:    0, 0,  1,  0, -1
         return dx, dy
     
-    def _action_transform(self, action):
+    def transform_actions(self, action):
         dx, dy = self.action2dir(action)
         gx, gy = self.gaze.move(dx, dy)
         gz = self.mat2vec(gx, gy)
         return gz
 
-    def _reset_trial(self):
+    def custom_reset_trial(self):
         self.gaze.set_pos(0,0)
 
-    def _render_frame_action(self, canvas):
+    def custom_render_frame_action(self, canvas):
         if self.gaze.pos_grid2D is not None:
             canvas = self._render_frame_grid2D(canvas, self.gaze.pos_grid2D, 'action')
         if self.gaze.lastpos_grid2D is not None:
             canvas = self._render_frame_grid2D(canvas, self.gaze.lastpos_grid2D, 'action', pointscale = 0.5)
         return canvas
     
-    def _render_frame_obs(self, canvas):
-        canvas = self._render_frame_grid2D(canvas, self.obs, 'obs')
+    def custom_render_frame_obs(self, canvas):
+        canvas = self._render_frame_grid2D(canvas, self._obs, 'obs')
+        return canvas
+    
+    def _render_frame_grid2D(self, canvas, data, dictname, pointscale = 1):
+        import pygame
+        params = self._renderer_auto_params[dictname]
+        if len(data.shape) == 1:
+            data = self.one_hot_2D(data[0], data[1])
+        n_channel = data.shape[2]            
+        for ci in range(n_channel):
+            tcol = params['colors'][ci]
+            tplottype = params['plottypes'][ci]
+            tradius = params['radius'][ci]
+            for xi in range(self.observation_space.shape[0]):
+                for yi in range(self.observation_space.shape[1]):
+                    tval = data[xi, yi, ci]
+                    tpos = self.plot_position[xi, yi]
+                    if tval > 0: # show
+                        if tplottype == "circle":
+                            pygame.draw.circle(canvas, tcol, tpos, np.mean(tradius) * pointscale)
+                        elif tplottype == "square":
+                            pygame.draw.rect(canvas, tcol, 
+                                np.concatenate((-tradius + tpos, tradius * 2), axis = None), 0)
         return canvas

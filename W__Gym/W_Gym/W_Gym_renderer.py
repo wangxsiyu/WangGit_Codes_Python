@@ -46,13 +46,16 @@ class W_Gym_renderer(W_Gym_task):
         self._renderer_canvas = self._render_frame_create()
         option = W.W_enlist(option)
         for x in option:    
-            if x is None:
-                assert hasattr(self, 'custom_render_frame')
-                self._renderer_canvas = self.custom_render_frame(self._renderer_canvas, *arg, **kwarg)
-            elif x == "action":
-                self._renderer_canvas = self._render_frame_action(self._renderer_canvas, *arg, **kwarg)
+            if x == "action":
+                if hasattr(self, 'custom_render_frame_action'):
+                    self._renderer_canvas = self.custom_render_frame_action(self._renderer_canvas, *arg, **kwarg)
+                else:   
+                    self._renderer_canvas = self._render_frame_action(self._renderer_canvas, *arg, **kwarg)
             elif x == "obs":
-                self._renderer_canvas = self._render_frame_obs(self._renderer_canvas, *arg, **kwarg)
+                if hasattr(self, 'custom_render_frame_obs'):
+                    self._renderer_canvas = self.custom_render_frame_obs(self._renderer_canvas, *arg, **kwarg)
+                else:
+                    self._renderer_canvas = self._render_frame_obs(self._renderer_canvas, *arg, **kwarg)
             elif x == "reward":
                 self._render_frame_reward(*arg, **kwarg)
             elif x == "time":

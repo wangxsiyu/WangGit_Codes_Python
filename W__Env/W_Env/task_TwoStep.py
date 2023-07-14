@@ -14,7 +14,6 @@ class task_TwoStep(W_Gym):
     def __init__(self, is_ITI = False, *arg, **kwarg):
         super().__init__(is_ITI = is_ITI, *arg, **kwarg)
         self.env_name = "TwoStep"
-        self._param_task = W.W_dict_updateonly(self._param_task, kwarg)
         # observation space
         self.observation_space = spaces.Discrete(3) # state 0, state 1, state 2
         # set action space
