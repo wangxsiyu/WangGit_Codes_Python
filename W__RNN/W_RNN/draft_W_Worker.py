@@ -1,7 +1,6 @@
 import torch
 from tqdm import tqdm 
 import pandas as pd
-import numpy as np
 
 class W_Worker:
     def __init__(self, env, model, *arg, **kwarg):
