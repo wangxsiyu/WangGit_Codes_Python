@@ -1,9 +1,9 @@
 from W_Python.W import W
 import numpy as np
 import pandas as pd
-import gym
+# import gym # try without gym
 
-class W_Gym_task(gym.Env):
+class W_Gym_task():
     """
     It implements a class of episodic task consists of blocks, trials, states and steps
     """
@@ -37,7 +37,9 @@ class W_Gym_task(gym.Env):
     _obs = None # observation
     _last_action = None
     _last_reward = 0
-    _env_vars = {} # environment moment-by-moment variables
+    _env_vars = {} # environment moment-by-moment variables (saved)
+    _env_vars_after = {} # environment variables after update (saved)
+    _temp_vars = {} # temp moment-by-moment variables (not saved)
     # draw observation
     _next_screen = None # to draw next screen
     _obs_channel_namedict = None # input dimension vs name, for easy drawing
@@ -52,7 +54,10 @@ class W_Gym_task(gym.Env):
     _data_istable = True
     _data = None
     # names 
-    env_name = 'task'
+    env_name = 'env'
+    dim_obs = None
+    n_actions = None
+    n_obs = None
 
     def __init__(self, n_maxTime = np.Inf, n_maxTrials = np.Inf, n_maxBlocks = np.Inf, \
                     block_n_maxTrials = np.Inf, option_obs_augment = ["reward", "action"], \
@@ -74,6 +79,19 @@ class W_Gym_task(gym.Env):
         else:
             savename = f"{self.env_name}"
         return savename
+
+    def setup_obs_dim(self, *arg):
+        self.dim_obs = np.array(arg)
+        self.n_obs = np.prod(self.dim_obs)
+
+    def setup_action_dim(self, n_actions, n_motor = None):
+        self.n_actions = n_actions
+        if n_motor is None:
+            n_motor = n_actions
+        self.n_motor = n_motor
+
+    def setup_obs_channel_namedict(self, mydict):
+        self._obs_channel_namedict = mydict
 
     def setup_state_parameters(self, state_names, state_timelimits = None, \
                     state_immediateadvance = None, \
@@ -149,10 +167,10 @@ class W_Gym_task(gym.Env):
             self._data_initialize()
         if hasattr(self, 'custom_reset'):
             self.custom_reset()
-        self._record('task', self._param_task)
+        self._record('task', self._param_task) # _param_task is not reset
 
     def _reset_block(self):
-        self._param_block = {}
+        self._param_block = {} # reset _param_block
         self._count_block_trial = 0
         self._time_block = 0
         if hasattr(self, 'custom_reset_block'):
@@ -161,7 +179,7 @@ class W_Gym_task(gym.Env):
         self._reset_trial()
 
     def _reset_trial(self):
-        self._param_trial = {}
+        self._param_trial = {} # reset _param_trial
         self._time_trial = 0
         self._trial_is_error = False
         if hasattr(self, 'custom_reset_trial'):
@@ -283,6 +301,7 @@ class W_Gym_task(gym.Env):
         
         self._last_action = action
         self._last_reward = reward
+        tdata.update(self._env_vars_after)
         tdata.update({'action': action, 'is_error': is_error, 'reward': reward})
         # record current action
         if is_record:
@@ -333,23 +352,31 @@ class W_Gym_task(gym.Env):
                 elif opt_name == "reward":
                     tval = np.array(self._last_reward)
                     tval = tval.reshape((1,))
+                else:
+                    tval = np.array(self._env_vars[opt_name])
+                    tval = tval.reshape((1,))
                 obs = np.concatenate((obs, tval))
         return obs
     
     def format_obs_for_save(self, obs):
+        if hasattr(self, 'custom_format_obs_for_save'):
+            obs = self.custom_format_obs_for_save(obs)
         return obs.flatten()
     
     def get_n_actions(self):
-        if hasattr(self, '_n_actions'):
-            return self._n_actions
-        else:
-            return self.action_space.n
+        assert hasattr(self, 'n_actions')
+        return self.n_actions
+        #    return self.action_space.n
 
     def get_n_obs(self, is_count_augmented_dimensions = True):
-        if self.observation_space.shape == ():
-            len = self.observation_space.n
-        else:
-            len = self.observation_space.shape
+        #if self.observation_space.shape == ():
+        #    len = self.observation_space.n
+        #else:
+        #    len = self.observation_space.shape
+        
+        assert hasattr(self, 'n_obs')
+        len = self.n_obs
+        
         if is_count_augmented_dimensions and self._metadata_gym['option_obs_augment'] is not None:
             for opt_name in iter(self._metadata_gym['option_obs_augment']):
                 if opt_name == "action": 
@@ -357,6 +384,10 @@ class W_Gym_task(gym.Env):
                 elif opt_name == "reward":
                     len += 1
         return len                
+    
+    def get_dim_obs(self):
+        assert hasattr(self, 'dim_obs')
+        return self.dim_obs
 
     def flip(self, is_clear = True):
         self._obs = self._next_screen
@@ -364,8 +395,8 @@ class W_Gym_task(gym.Env):
             self.blankscreen()
 
     def blankscreen(self):
-        assert hasattr(self, 'observation_space')
-        self._next_screen = np.zeros(self.get_n_obs(is_count_augmented_dimensions=False))
+        # assert hasattr(self, 'observation_space')
+        self._next_screen = np.zeros(self.get_dim_obs())
 
     # draw obs
     def draw_onehot(self, channelname, val):
@@ -376,9 +407,6 @@ class W_Gym_task(gym.Env):
         assert self._obs_channel_namedict is not None
         idx = self._obs_channel_namedict[channelname]
         self._next_screen[idx] = val
-
-    def setup_obs_channel_namedict(self, mydict):
-        self._obs_channel_namedict = mydict
     
     def _record(self, datatype, datadict = None):
         if not self._data_issave:
@@ -397,18 +425,3 @@ class W_Gym_task(gym.Env):
                 df = pd.DataFrame()
             self._data[datatype] = pd.concat((df, newdata))
     
-
-
-
-
-
-
-
-    
-
-
-    
-        
-        
-
-        

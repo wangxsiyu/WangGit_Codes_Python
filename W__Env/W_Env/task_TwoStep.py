@@ -1,6 +1,6 @@
 from W_Gym.W_Gym import W_Gym
 from W_Python.W import W
-from gym import spaces
+# from gym import spaces
 import random
 import numpy as np
 
@@ -15,9 +15,9 @@ class task_TwoStep(W_Gym):
         super().__init__(is_ITI = is_ITI, *arg, **kwarg)
         self.env_name = "TwoStep"
         # observation space
-        self.observation_space = spaces.Discrete(3) # state 0, state 1, state 2
+        self.setup_obs_dim(3) # state 0, state 1, state 2
         # set action space
-        self.action_space = spaces.Discrete(2) # shuttle 1, shuttle 2
+        self.setup_action_dim(2) # shuttle 1, shuttle 2
         # set rendering dimension names
         self.setup_obs_channel_namedict({'planet0':0, 'planet1':1, 'planet2':2})
         # set stages

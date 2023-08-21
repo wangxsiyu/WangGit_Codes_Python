@@ -57,9 +57,15 @@ class W_Gym_renderer(W_Gym_task):
                 else:
                     self._renderer_canvas = self._render_frame_obs(self._renderer_canvas, *arg, **kwarg)
             elif x == "reward":
-                self._render_frame_reward(*arg, **kwarg)
+                if hasattr(self, 'custom_render_frame_reward'):
+                    self.custom_render_frame_reward(*arg, **kwarg)
+                else:
+                    self._render_frame_reward(*arg, **kwarg)
             elif x == "time":
-                self._render_frame_time(*arg, **kwarg)
+                if hasattr(self, 'custom_render_frame_time'):
+                    self.custom_render_frame_time(*arg, **kwarg)
+                else:
+                    self._render_frame_time(*arg, **kwarg)
             else:
                 assert hasattr(self, 'custom_render_frame')
                 self._renderer_canvas = self.custom_render_frame(self._renderer_canvas, x, *arg, **kwarg)

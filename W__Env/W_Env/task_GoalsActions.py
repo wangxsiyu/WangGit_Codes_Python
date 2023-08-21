@@ -1,15 +1,15 @@
-from W_Gym.W_Gym_Grid2D import W_Gym_grid2D
+from W_Gym.W_Gym_Grid2D import W_Gym_Grid2D
 from W_Python.W import W
-from gym import spaces
+# from gym import spaces
 import numpy as np
 
-class task_GoalsActions(W_Gym_grid2D):
+class task_GoalsActions(W_Gym_Grid2D):
     _param_task = {'p_reward': 1}
     def __init__(self, n_maxTrialsPerBlock = 30, **kwarg):
         self.env_name = "GoalsActions"
-        super().__init__(3,3,6, n_maxTrialsPerBlock = n_maxTrialsPerBlock, **kwarg)
+        super().__init__(3,3,6, key_preset = "arrow+", n_maxTrialsPerBlock = n_maxTrialsPerBlock, **kwarg)
         # set action space
-        self.action_space = spaces.Discrete(5) # stay, left, up, right, down
+        # stay, left, up, right, down
         # set rendering dimension names
         self.setup_obs_channel_namedict({'fixation':0, \
                                        'square':1, 'imageA':2, 'imageB':3, \
@@ -22,8 +22,8 @@ class task_GoalsActions(W_Gym_grid2D):
         self.setup_state_parameters(state_names = state_names, state_immediateadvance = state_immediateadvance, \
                                     state_timelimits = "ones")
         # task constants 
-        self.cccs = np.array([6,8,2,0])
-        self.ccs = np.array([3,7,5,1])
+        self.cccs = np.array([0,2,8,6])
+        self.ccs = np.array([3,1,5,7])
         self.setup_human_keys_auto('arrows_plus')
     
     def setup_render_parameters(self):
@@ -46,6 +46,7 @@ class task_GoalsActions(W_Gym_grid2D):
         ccc_id = np.random.choice(4,2, replace = False)
         cc_id = np.array([0,2]) + np.random.choice(2,1)
         self._param_trial = {'ccc_id': ccc_id, 'ccc_pos': cccs[ccc_id], 'cc_id':cc_id, 'cc_pos':ccs[cc_id]}
+        print(self._param_trial)
         self._env_vars['pos_choice1'] = None
         self._env_vars['pos_choice2'] = None
     
