@@ -1,5 +1,9 @@
 setup.py
+W_Trainer/W_Buffer.py
+W_Trainer/W_Logger.py
+W_Trainer/W_Trainer.py
 W_Trainer/W_Worker.py
+W_Trainer/W_loss.py
 W_Trainer/__init__.py
 W_Trainer.egg-info/PKG-INFO
 W_Trainer.egg-info/SOURCES.txt
