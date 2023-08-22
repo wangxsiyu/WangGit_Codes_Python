@@ -1,6 +1,6 @@
 
 from .W_Gym_renderer import W_Gym_renderer
-from .W_Gym_task import W_Gym_task
+# from .W_Gym_task import W_Gym_task
 
 class W_Gym(W_Gym_renderer):
     # interactive component

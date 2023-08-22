@@ -1,0 +1,9 @@
+setup.py
+W_Trainer/W_Worker.py
+W_Trainer/__init__.py
+W_Trainer.egg-info/PKG-INFO
+W_Trainer.egg-info/SOURCES.txt
+W_Trainer.egg-info/dependency_links.txt
+W_Trainer.egg-info/not-zip-safe
+W_Trainer.egg-info/requires.txt
+W_Trainer.egg-info/top_level.txt
