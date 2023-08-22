@@ -5,10 +5,8 @@ class W_Logger():
     save_path = None
     save_interval = 100
     smooth_interval = 100
-    last_saved_version = None
     max_episodes = None
     start_episode = None
-    info = None
     is_supervised = False
     supervised_test_interval = 1
     def __init__(self):
@@ -24,14 +22,7 @@ class W_Logger():
             print("warning: info overwriten")
         self.info = info
 
-    def get_start_episode(self):
-        if self.start_episode is None:
-            self.start_episode = 0
-        return self.start_episode
-
     def init(self, max_episodes):
-        self.episode =  self.get_start_episode()
-        self.max_episodes = max_episodes
         nep = max_episodes + 1
         if self.info is not None and self.info['rewards'].shape[0] < nep:
             nep -= self.info['rewards'].shape[0]
@@ -62,7 +53,6 @@ class W_Logger():
         self.info = info
         if hasattr(self, '_update'):
             self._update(gameinfo)
-        self.episode += 1
         
     def getdescription(self):
         info = self.info
@@ -79,14 +69,5 @@ class W_Logger():
             str = self._getdescription(str)        
         return str
     
-    def save(self, state_dict):
-        if self.save_path is not None:
-            if (self.episode-1) % self.save_interval == 0:
-                save_path = self.save_path + "_{epi:09d}".format(epi=self.episode-1) + ".pt"
-                self.last_saved_version = save_path
-                torch.save({
-                    "state_dict": state_dict,
-                    "training_info": self.info,
-                }, save_path)  
 
         

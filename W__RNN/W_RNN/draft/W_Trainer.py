@@ -8,25 +8,11 @@ import re
             print(f"enabling {self.device}")
 
 
-class W_loss:
-    loss_name = None
-    def __init__(self, loss, device):
         if device is None:
             self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
             print(f"enabling {self.device}")
         else:
-            self.device = device
-        
-        self.loss_cross_entropy = torch.nn.CrossEntropyLoss()
-        
-        self.loss_name = loss['name']
-        self.params = loss['params']
 
-    def loss(self, *arg, **kwarg):
-        if self.loss_name == "A2C":
-            return self.loss_A2C(*arg, **kwarg)   
-        elif self.loss_name == "A2C_supervised":
-            return self.loss_A2C_supervised(*arg, **kwarg)     
 
     def loss_A2C_supervised(self, buffer, trainingbuffer):
         gamma = self.params['gamma']
@@ -59,6 +45,7 @@ class W_loss:
         perr = 1 - torch.mean((action_dist.detach().argmax(axis = 2) == action.argmax(axis = 2)).float())
         info = {'perror': perr}
         return loss, info
+
 
     def loss_A2C(self, buffer, trainingbuffer):
         gamma = self.params['gamma']
@@ -98,10 +85,6 @@ class W_loss:
         if torch.isinf(loss):
             print('check')
         return loss, None
-
-class W_Trainer(W_Worker): 
- 
-
     
 
 
