@@ -17,7 +17,8 @@ class W_Trainer(W_Worker):
     # device (for training)
     seed = None
     gradientclipping = None
-    def __init__(self, env, model, param_loss, param_optim, param_logger = None, param_buffer = None, gradientclipping = None, \
+    def __init__(self, env, model, param_loss, param_optim, param_logger = None, param_buffer = None, \
+                 gradientclipping = None, \
                  seed = None, *arg, **kwarg):
         super().__init__(env, model, *arg, **kwarg)
         self.setup_randomseed(seed)

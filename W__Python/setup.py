@@ -7,6 +7,6 @@ setuptools.setup(
     author='Siyu Wang',
     author_email='wangxsiyu@gmail.com',
     packages = setuptools.find_packages(),
-    install_requires =['numpy', 'os', 'itertools', 'time', 'inspect'],
+    install_requires =['numpy'],
     zip_safe=False
 )

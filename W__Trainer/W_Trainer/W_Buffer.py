@@ -5,11 +5,11 @@ import random
 class W_Buffer:
     buffer = []
     memory = []
-    def __init__(self, varnames, param_buffer, device = None, *arg, **kwarg):
+    def __init__(self, param_buffer, device = None, *arg, **kwarg):
         self.device = device
-        self.tuple_buffer = namedtuple('Buffer', varnames)
-        param = {"capacity": np.Inf, "mode_sample": "random"}
+        param = {"capacity": np.Inf, "mode_sample": "random", "tuple": ("obs","action","reward")}
         param.update(param_buffer)
+        self.tuple_buffer = namedtuple('Buffer', param['tuple'])
         self.memory = []
         self.capacity = param_buffer['capacity']
         self.mode_sample = param_buffer['mode_sample']

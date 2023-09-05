@@ -1,9 +1,6 @@
 setup.py
-W_RNN/W_Logger.py
 W_RNN/W_RNN.py
-W_RNN/W_RNN_Gates.py
-W_RNN/W_Trainer.py
-W_RNN/W_Worker.py
+W_RNN/W_RNN_gates.py
 W_RNN/__init__.py
 W_RNN.egg-info/PKG-INFO
 W_RNN.egg-info/SOURCES.txt

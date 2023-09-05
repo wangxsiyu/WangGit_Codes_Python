@@ -1,7 +1,8 @@
 setup.py
 W_Gym/W_Gym.py
 W_Gym/W_Gym_Grid2D.py
-W_Gym/W_Gym_simulator.py
+W_Gym/W_Gym_renderer.py
+W_Gym/W_Gym_task.py
 W_Gym/__init__.py
 W_Gym.egg-info/PKG-INFO
 W_Gym.egg-info/SOURCES.txt

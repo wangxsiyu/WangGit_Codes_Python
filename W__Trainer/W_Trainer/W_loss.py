@@ -1,6 +1,7 @@
 import torch
+from .W_loss_A2C import W_loss_A2C
 
-class W_loss:
+class W_loss(W_loss_A2C):
     loss_name = None
     loss_params = None
     def __init__(self, loss, device):
@@ -12,7 +13,6 @@ class W_loss:
     def loss(self, *arg, **kwarg):
         if self.loss_name == "A2C":
             return self.loss_A2C(*arg, **kwarg)   
-        elif self.loss_name == "A2C_supervised":
-            return self.loss_A2C_supervised(*arg, **kwarg)     
-        
-    
+        # elif self.loss_name == "A2C_supervised":
+        #     return self.loss_A2C_supervised(*arg, **kwarg)     
+       

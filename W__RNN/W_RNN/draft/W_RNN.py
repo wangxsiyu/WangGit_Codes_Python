@@ -1,27 +1,7 @@
-import torch
-import torch.nn as nn
+
 from W_RNN.W_RNN_Gates import W_RNNgate_noise
 
-class W_RNN(nn.Module):
-    def __init__(self, input_len, hidden_len, gatetype = "vanilla", inittype = None, device = None,\
-                 *arg, **kwarg):
-        super().__init__()
-        if device is None:
-            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-            print(f"enabling {self.device}")
-        else:
-            self.device = device
-        self.makeRNN(gatetype, input_len, hidden_len, device = device, *arg, **kwarg)
-        self.initParamsRNN(gatetype, inittype)
 
-    def makeRNN(self, gatetype, input_len, hidden_len, device = None, *arg, **kwarg):
-        if gatetype == "LSTM":
-            self.RNN = nn.LSTM(input_len, hidden_len)  
-        if gatetype == "vanilla":
-            self.RNN = nn.RNN(input_len, hidden_len, nonlinearity = 'relu') 
-        if gatetype == "noise":
-            self.RNN = W_RNNgate_noise(input_len, hidden_len, device=device, *arg, **kwarg) 
-        self.RNN.to(self.device)
 
     def initParamsRNN(self, gatetype, inittype):
         if gatetype == "LSTM":

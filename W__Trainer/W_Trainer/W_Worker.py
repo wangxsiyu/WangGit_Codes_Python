@@ -10,7 +10,7 @@ class W_Worker:
     device = None
     def __init__(self, env, model, device = "cpu", mode_action = "softmax", *arg, **kwarg):
         self.device = device
-        self.env = env.to(device)
+        self.env = env
         self.model = model.to(device)
         self.mode_action = mode_action
 
