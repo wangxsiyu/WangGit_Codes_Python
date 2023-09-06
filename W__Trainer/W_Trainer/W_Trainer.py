@@ -83,9 +83,9 @@ class W_Trainer(W_Worker):
                 
     def train_generatedata(self, batch_size, train_mode, is_online, *arg, **kwarg):
         if train_mode == "RL":
-            if is_online:
+            if is_online: # create new experience for each batch
                 reward, data = self.work(n_episode = batch_size, *arg, **kwarg)
-            else:
+            else: # create 1 experience, and resample from the memory buffer
                 reward, data = self.work(n_episode = 1, *arg, **kwarg)
         elif train_mode == "supervised":
             if self.logger.supervised_test_interval is not None and self.logger.episode % self.logger.supervised_test_interval == 0:

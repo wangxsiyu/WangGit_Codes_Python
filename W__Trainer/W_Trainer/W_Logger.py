@@ -6,14 +6,14 @@ class W_Logger():
     def __init__(self, param_logger):
         self.metadata_logger.update(param_logger)
         self.last_saved_filename = None
-        self.start_episode = 0
+        self.start_episode = None
 
     def initialize(self, max_episodes):
         self.episode =  self.get_start_episode()
         self.max_episodes = max_episodes
         tqdmrange = range(self.episode, self.max_episodes)
         return tqdmrange
-
+    
     def get_start_episode(self):
         if self.start_episode is None:
             self.start_episode = 0

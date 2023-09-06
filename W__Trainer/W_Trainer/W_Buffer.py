@@ -7,7 +7,7 @@ class W_Buffer:
     memory = []
     def __init__(self, param_buffer, device = None, *arg, **kwarg):
         self.device = device
-        param = {"capacity": np.Inf, "mode_sample": "random", "tuple": ("obs","action","reward")}
+        param = {"capacity": np.Inf, "mode_sample": "random", "tuple": ("obs","action","reward","isdone")}
         param.update(param_buffer)
         self.tuple_buffer = namedtuple('Buffer', param['tuple'])
         self.memory = []

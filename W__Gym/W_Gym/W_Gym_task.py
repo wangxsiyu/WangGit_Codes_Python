@@ -383,6 +383,8 @@ class W_Gym_task():
                     len += self.get_n_actions()
                 elif opt_name == "reward":
                     len += 1
+                else:
+                    len += np.array(self._env_vars[opt_name]).size
         return len                
     
     def get_dim_obs(self):
