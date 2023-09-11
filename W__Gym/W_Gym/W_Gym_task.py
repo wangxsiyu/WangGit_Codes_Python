@@ -10,7 +10,7 @@ class W_Gym_task():
     # meta parameters
     # gym variables 
     _metadata_gym = {"n_maxTime": np.Inf, "n_maxTrials": np.Inf, "n_maxBlocks": np.Inf, \
-                    "block_n_maxTrials": np.Inf, \
+                    "block_n_maxTrials": np.Inf, 'trial_n_maxTime': np.Inf,  \
                     "option_obs_augment": ["action", "reward"], \
                     "option_obs_is_flatten": True, "is_ITI": True}
     # state variables
