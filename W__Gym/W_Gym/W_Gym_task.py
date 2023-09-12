@@ -284,6 +284,7 @@ class W_Gym_task():
         elif is_transition:
             treward, t_is_done = self._state_transition()
         else:
+            treward = 0
             t_is_done = False
         reward += treward
         is_done = is_done or t_is_done
