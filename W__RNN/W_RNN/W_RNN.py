@@ -37,8 +37,6 @@ class W_RNN(nn.Module):
         if layer is not None:
             if isinstance(layer, int):
                 layer = nn.Linear(self.hidden_dim, layer)
-            if hasattr(layer, 'to'):
-                layer.to(self.device)
         return layer
 
     def forward(self, *arg, **kwarg):
@@ -62,8 +60,10 @@ class W_RNN(nn.Module):
             hidden_state = self.get_initial_latent_value(batch_size)   
         # obs = obs.permute((1,0,2))     
         feature, hidden_state = self.RNN(obs, hidden_state, self.device)
+        self.actionlayer.to(self.device)
         actionvec = self.actionlayer(feature)
         if self.outputlayer is not None:
+            self.outputlayer.to(self.device)
             outputvec = self.outputlayer(feature)
             return actionvec, hidden_state, outputvec
         else:

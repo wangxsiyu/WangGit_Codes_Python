@@ -44,18 +44,17 @@ class W_Trainer(W_Worker):
 
     def run_episode_buffer(self, buffer, *arg, **kwarg): # NEED EDIT
         self.model.train()
-        (obs, action, _,_,_) = buffer
+        # (obs, action, _,_,_) = buffer
         if hasattr(self.model, 'initialize_latentvariables'):
             LV = self.model.initialize_latentvariables()
         else:
             LV = None
-        action_vector, LV, additional_output = self.model(obs, LV)
+        action_vector, LV, additional_output = self.model(buffer.obs, LV)
         action_dist = torch.nn.functional.softmax(action_vector, dim = -1)
-        action_dist = action_dist.permute((1,0,2))
+        # action_dist = action_dist.permute((1,0,2))
         eps = 1e-4
         action_dist = action_dist.clamp(eps, 1-eps)
-        val_estimate = val_estimate.permute((1,0,2)).squeeze(2) # this should go in additional_output
-        action_likelihood = (action_dist * action).sum(-1)
+        action_likelihood = (action_dist * buffer.action).sum(-1)
         tb = namedtuple('TrainingBuffer', ("action_dist","value", "action_likelihood"))
         return tb(action_dist, val_estimate, action_likelihood)
     
@@ -84,6 +83,7 @@ class W_Trainer(W_Worker):
     def train_generatedata(self, batch_size, train_mode, is_online, *arg, **kwarg):
         if train_mode == "RL":
             if is_online: # create new experience for each batch
+                self.buffer.clear_buffer()
                 reward, data = self.work(n_episode = batch_size, *arg, **kwarg)
             else: # create 1 experience, and resample from the memory buffer
                 reward, data = self.work(n_episode = 1, *arg, **kwarg)
@@ -99,7 +99,7 @@ class W_Trainer(W_Worker):
     def train_getdata(self, batch_size, train_mode, is_online, *arg, **kwarg):
         if train_mode == "RL":          
             if is_online:
-                batchdata = self.buffer.alldata()
+                batchdata = self.buffer.sample(batch_size, 'all')
             else:
                 batchdata = self.buffer.sample(batch_size)
         elif train_mode == "supervised":

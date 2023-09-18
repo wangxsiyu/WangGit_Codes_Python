@@ -17,8 +17,13 @@ class W_Worker:
     def select_action(self, action_vector):
         if self.mode_action == "softmax":
             # q = action_vector.numpy()
-            prob = np.exp(action_vector) / np.sum(np.exp(action_vector))
-            action = np.random.choice(np.arange(len(prob)), size = 1, p = prob) # this should be in torch
+            if torch.is_tensor(action_vector):
+                prob = torch.nn.functional.softmax(action_vector, dim = 1)
+                dist=torch.distributions.categorical.Categorical(probs=prob)
+                action = dist.sample()
+            else:
+                prob = np.exp(action_vector) / np.sum(np.exp(action_vector))
+                action = np.random.choice(np.arange(len(prob)), size = 1, p = prob) # this should be in torch
         return action
     
     def work(self, n_episode = 1, showprogress = False, *arg, **kwarg):
@@ -61,15 +66,15 @@ class W_Worker:
             Warning(f"recording ends: format check failed, please check!")
         return behaviors, recordings if is_record else behaviors
     
-    def run_episode(self, recording_mode = "eval", *arg, **kwarg): # recording_mode: training, behavior, neurons 
+    def run_episode(self, recording_mode = "train", *arg, **kwarg): # recording_mode: training, behavior, neurons 
         model = self.model
         env = self.env
         assert model is not None
         assert env is not None
         if recording_mode in ["behavior", "neurons"]:
             return self.run_episode_recording(env, model, recording_mode, *arg, **kwarg)
-        elif recording_mode == "eval":
-            return self.run_episode_eval(env, model, *arg, **kwarg)
+        elif recording_mode == "train":
+            return self.run_episode_train(env, model, *arg, **kwarg)
 
     def run_episode_recording(self, env, model, recording_mode = "behavior"):
         done = False
@@ -98,11 +103,12 @@ class W_Worker:
         else:
             return env._data
         
-    def run_episode_eval(self, env, model):
+    def run_episode_train(self, env, model):
         done = False
         env.saveoff() # do not save behavior
         model.eval()
         obs = env.reset() # return numpy array
+        obs = torch.from_numpy(obs).unsqueeze(0).float()
         if hasattr(model, 'initialize_latentvariables'):
             LV = model.initialize_latentvariables()
         else:
@@ -112,17 +118,20 @@ class W_Worker:
         while not done:
             # take actions
             data['obs'].append(obs)
-            obs = torch.from_numpy(obs).unsqueeze(0).float()
             action_vector, LV, additional_output = model(obs, LV) # return action, hidden_state, additional_output can be value etc
             action = self.select_action(action_vector)
-            obs_new, reward, done, timestep = env.step(action)
-            reward = float(reward)
+            obs_new, reward, done, timestep = env.step(action.cpu().numpy())
+            obs_new = torch.from_numpy(obs_new).unsqueeze(0).float()
             data['obs_next'].append(obs_new)
-            data['action'].append(action)
-            data['reward'].append(reward)
-            data['timestep'].append(timestep)
+            data['action'].append(action.unsqueeze(0))
+            data['reward'].append(torch.tensor(float(reward)).unsqueeze(0).unsqueeze(0))
+            data['timestep'].append(torch.tensor(timestep).unsqueeze(0).unsqueeze(0))
             data['additional_output'].append(additional_output)
             obs = obs_new
             total_reward += reward
+        keys = list(data.keys())
+        for x in keys:
+            data[x] = torch.concat(data[x]).float()
+        # d = [np.array(x, dtype = 'float') for x in arg]
         return total_reward, data
     

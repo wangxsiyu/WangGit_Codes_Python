@@ -96,6 +96,7 @@ class W_Gym_Grid2D(W_Gym):
         return gaze
 
     def action2dir(self, action): 
+        action = int(action)
         if self.key_preset == "arrow+": # action: 0, 1, 2, 3, 4
             pass
         elif self.key_preset == "arrow": # action = 0,1,2,3
