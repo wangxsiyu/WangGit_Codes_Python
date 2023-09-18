@@ -23,9 +23,9 @@ class W_Logger():
         self.episode += 1
 
     def save(self, state_dict):
-        if self.save_path is not None:
+        if self.metadata_logger['save_path'] is not None:
             if (self.episode) % self.metadata_logger['save_interval'] == 0:
-                save_path = self.save_path + "_{epi:09d}".format(epi=self.episode) + ".pt"
+                save_path = self.metadata_logger['save_path'] + "_{epi:09d}".format(epi=self.episode) + ".pt"
                 self.last_saved_filename = save_path
                 torch.save({
                     "state_dict": state_dict,
