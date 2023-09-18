@@ -40,7 +40,7 @@ class W_Buffer:
         
         buffer = []
         for i in keys:
-            buffer += [torch.concat([x[i] for x in d])]
+            buffer += [torch.concat([x[i].unsqueeze(0) for x in d])]
         
         out = tuple_buffer(*buffer)
         return out

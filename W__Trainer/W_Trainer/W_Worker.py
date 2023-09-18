@@ -114,7 +114,8 @@ class W_Worker:
         else:
             LV = None
         total_reward = 0
-        data = {'obs':[], 'reward':[], 'action':[], 'obs_next':[], 'timestep':[], 'additional_output':[]}
+        data = {'obs':[], 'reward':[], 'action':[], 'obs_next':[], 'timestep':[], \
+                'isdone': [], 'additional_output':[]}
         while not done:
             # take actions
             data['obs'].append(obs)
@@ -126,6 +127,7 @@ class W_Worker:
             data['action'].append(action.unsqueeze(0))
             data['reward'].append(torch.tensor(float(reward)).unsqueeze(0).unsqueeze(0))
             data['timestep'].append(torch.tensor(timestep).unsqueeze(0).unsqueeze(0))
+            data['isdone'].append(torch.tensor(done).unsqueeze(0).unsqueeze(0))
             data['additional_output'].append(additional_output)
             obs = obs_new
             total_reward += reward

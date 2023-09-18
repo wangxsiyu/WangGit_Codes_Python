@@ -55,7 +55,7 @@ class W_Trainer(W_Worker):
         # action_dist = action_dist.permute((1,0,2))
         eps = 1e-4
         action_dist = action_dist.clamp(eps, 1-eps)
-        action_onehot = W.W_onehot(buffer.action.squeeze(), action_dist.shape[1]).to(self.device)
+        action_onehot = W.W_onehot(buffer.action.squeeze(), action_dist.shape[-1]).to(self.device)
         action_likelihood = (action_dist * action_onehot).sum(-1)
         tb = namedtuple('TrainingBuffer', ("action_dist", "action_likelihood","outputs"))
         return tb(action_dist, action_likelihood, buffer.additional_output)

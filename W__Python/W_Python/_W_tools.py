@@ -19,9 +19,18 @@ class W_tools():
             if x is None:
                 return torch.zeros(n)
             else:
-                return torch.squeeze(torch.eye(n)[x.cpu().numpy()])
+                x = x.cpu().numpy()
+                shape = x.shape
+                x = x.reshape((1,-1))
+                out = torch.squeeze(torch.eye(n)[x])
+                out = out.reshape(shape + (n,))
+                return out
         else:
             if x is None:
                 return np.zeros(n)
             else:
-                return np.squeeze(np.eye(n)[x])
+                shape = x.shape
+                x = x.reshape((1,-1))
+                out = np.squeeze(np.eye(n)[x])
+                out = out.reshape(shape + (n,))
+                return out
