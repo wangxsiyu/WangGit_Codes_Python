@@ -3,6 +3,7 @@ from .W_Worker import W_Worker
 from .W_Logger import W_Logger
 from .W_loss import W_loss
 from .W_Buffer import W_Buffer
+from W_Python.W import W
 from tqdm import tqdm 
 import torch
 import numpy as np
@@ -54,9 +55,10 @@ class W_Trainer(W_Worker):
         # action_dist = action_dist.permute((1,0,2))
         eps = 1e-4
         action_dist = action_dist.clamp(eps, 1-eps)
-        action_likelihood = (action_dist * buffer.action).sum(-1)
-        tb = namedtuple('TrainingBuffer', ("action_dist","value", "action_likelihood"))
-        return tb(action_dist, val_estimate, action_likelihood)
+        action_onehot = W.W_onehot(buffer.action.squeeze(), action_dist.shape[1]).to(self.device)
+        action_likelihood = (action_dist * action_onehot).sum(-1)
+        tb = namedtuple('TrainingBuffer', ("action_dist", "action_likelihood","outputs"))
+        return tb(action_dist, action_likelihood, buffer.additional_output)
     
     def train(self, max_episodes = 10, batch_size = 1, train_mode = "RL", is_online = False, \
               progressbar_position = 0, *arg, **kwarg):

@@ -1,6 +1,7 @@
 
 import numpy as np
 import itertools
+import torch
 
 class W_tools():
     def W_counter_balance(params):
@@ -14,7 +15,13 @@ class W_tools():
         return dct
 
     def W_onehot(x, n):
-        if x is None:
-            return np.zeros(n)
+        if torch.is_tensor(x):
+            if x is None:
+                return torch.zeros(n)
+            else:
+                return torch.squeeze(torch.eye(n)[x.cpu().numpy()])
         else:
-            return np.squeeze(np.eye(n)[x])
+            if x is None:
+                return np.zeros(n)
+            else:
+                return np.squeeze(np.eye(n)[x])
