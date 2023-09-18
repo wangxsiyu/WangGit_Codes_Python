@@ -69,7 +69,7 @@ class W_Trainer(W_Worker):
         for _ in progress:
             batchdata = self.train_getdata(batch_size, train_mode, is_online)
             modelbuffer = self.run_episode_buffer(batchdata)
-            self.optimizer.zero_grad()fder"""  """
+            self.optimizer.zero_grad()
             loss, info_loss = self.loss.loss(batchdata, modelbuffer)
             loss.backward()
             if self.gradientclipping is not None:
