@@ -14,7 +14,7 @@ class W_tools():
         dct['n'] = lst.shape[0]
         return dct
 
-    def W_onehot(x, n):
+    def W_onehot_array(x, n):
         if torch.is_tensor(x):
             if x is None:
                 return torch.zeros(n)
@@ -25,7 +25,7 @@ class W_tools():
                 out = torch.squeeze(torch.eye(n)[x])
                 out = out.reshape(shape + (n,))
                 return out
-        else:
+        else: 
             if x is None:
                 return np.zeros(n)
             else:
@@ -34,3 +34,10 @@ class W_tools():
                 out = np.squeeze(np.eye(n)[x])
                 out = out.reshape(shape + (n,))
                 return out
+            
+    def W_onehot(x, n):
+        if x is None:
+            return np.zeros(n)
+        else:
+            out = np.squeeze(np.eye(n)[x])
+            return out

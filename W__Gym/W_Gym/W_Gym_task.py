@@ -61,8 +61,11 @@ class W_Gym_task():
 
     def __init__(self, n_maxTime = np.Inf, n_maxTrials = np.Inf, n_maxBlocks = np.Inf, \
                     block_n_maxTrials = np.Inf, option_obs_augment = ["reward", "action"], \
-                    option_obs_is_flatten = True, is_ITI = True, dt = 1, is_save = False, is_save_table = True, *arg, **kwarg):
+                    option_obs_is_flatten = True, is_ITI = True, dt = 1, is_save = False, is_save_table = True, \
+                    param_task = None, *arg, **kwarg):
         self._param_task = W.W_dict_updateonly(self._param_task, kwarg)
+        if param_task is not None:
+            self._param_task = W.W_dict_updateonly(self._param_task, param_task)
         _param_inputs = W.W_dict_function_arguments()
         W.W_dict_updateonly(self._metadata_gym, _param_inputs)
         if self._metadata_gym['option_obs_augment'] is not None:
@@ -259,6 +262,8 @@ class W_Gym_task():
             tdata.update(self._param_block)
             tdata.update(self._param_task)
         # transform actions
+        # if len(action_motor) == 1:
+        #     action_motor = int(action_motor)
         if hasattr(self, "transform_actions"):
             action = self.transform_actions(action_motor)
         else:

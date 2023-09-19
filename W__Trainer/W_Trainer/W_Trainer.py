@@ -19,23 +19,26 @@ class W_Trainer(W_Worker):
     seed = None
     gradientclipping = None
     def __init__(self, env, model, param_loss, param_optim, param_logger = None, param_buffer = None, \
-                 gradientclipping = None, \
+                 gradientclipping = None, save_path = '', \
                  seed = None, *arg, **kwarg):
         super().__init__(env, model, *arg, **kwarg)
-        self.setup_randomseed(seed)
+        self.save_path = save_path
+        self.seed = seed
+        self.setup_randomseed()
         self.gradientclipping = gradientclipping
-
         self.loss = W_loss(param_loss, device = self.device)
         self.buffer = W_Buffer(param_buffer, device = self.device)
+        param_logger.update(save_path = save_path)
         self.logger = W_Logger(param_logger)
         self.setup_optimizer(param_optim)
 
-    def setup_randomseed(self, seed):
+    def setup_randomseed(self, seed = None):
+        if seed is None:
+            seed = self.seed
         if seed is not None:    
             torch.manual_seed(seed)
             np.random.seed(seed)
             torch.random.manual_seed(seed)
-            self.seed = seed
         
     def setup_optimizer(self, param_optim):
         params = list(self.model.parameters())
@@ -55,7 +58,7 @@ class W_Trainer(W_Worker):
         # action_dist = action_dist.permute((1,0,2))
         eps = 1e-4
         action_dist = action_dist.clamp(eps, 1-eps)
-        action_onehot = W.W_onehot(buffer.action.squeeze(), action_dist.shape[-1]).to(self.device)
+        action_onehot = W.W_onehot_array(buffer.action.squeeze(), action_dist.shape[-1]).to(self.device)
         action_likelihood = (action_dist * action_onehot).sum(-1)
         tb = namedtuple('TrainingBuffer', ("action_dist", "action_likelihood","outputs"))
         return tb(action_dist, action_likelihood, buffer.additional_output)
@@ -63,7 +66,10 @@ class W_Trainer(W_Worker):
     def train(self, max_episodes = 10, batch_size = 1, train_mode = "RL", is_online = False, \
               progressbar_position = 0, *arg, **kwarg):
         tqdmrange = self.logger.initialize(max_episodes)
-        progress = tqdm(tqdmrange, position = progressbar_position, leave=True)
+        if progressbar_position is not None:
+            progress = tqdm(tqdmrange, position = progressbar_position, leave=True)
+        else:
+            progress = tqdmrange
         reward, newdata = self.train_generatedata(batch_size, train_mode, is_online)
         self.logger.update(reward, None, newdata)
         for _ in progress:

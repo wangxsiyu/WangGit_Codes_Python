@@ -3,15 +3,16 @@ import torch.nn as nn
 from .W_RNN_gates import W_RNN_LSTM
 
 class W_RNN(nn.Module):
-    def __init__(self, input_len, hidden_len, gatetype = "vanilla", actionlayer = None, outputlayer = None, \
+    def __init__(self, input_len, hidden_len, gatetype = "vanilla", \
+                 actionlayer = 2, outputlayer = None, \
                  is_param_initial = True, device = None,\
                  *arg, **kwarg):
         super().__init__()
         self.hidden_dim = hidden_len
         self.device = device
         self.create_RNN(gatetype, input_len, hidden_len, device = device, *arg, **kwarg)
-        self.actionlayer = self.create_linear(actionlayer, 2)
-        self.outputlayer = self.create_linear(outputlayer, None)
+        self.actionlayer = self.create_linear(actionlayer)
+        self.outputlayer = self.create_linear(outputlayer)
         self.setup_initial_parameters(gatetype, is_param_initial)
         
     def setup_initial_parameters(self, gatetype, is_param_initial = True): 
@@ -31,9 +32,7 @@ class W_RNN(nn.Module):
         #     self.RNN = W_RNNgate_noise(input_len, hidden_len, device=device, *arg, **kwarg) 
         self.RNN.to(self.device)
 
-    def create_linear(self, layer, default):
-        if layer is None:
-            layer = default
+    def create_linear(self, layer):
         if layer is not None:
             if isinstance(layer, int):
                 layer = nn.Linear(self.hidden_dim, layer)
