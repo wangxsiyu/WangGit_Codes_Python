@@ -4,10 +4,10 @@ import torch
 class W_loss_A2C:
     def loss_A2C(self, buffer, trainingbuffer):
         gamma = self.loss_params['gamma']        
-        reward = buffer.reward.squeeze().to(self.device)
-        done = buffer.isdone.squeeze().to(self.device)
+        reward = buffer.reward.squeeze(-1).to(self.device)
+        done = buffer.isdone.squeeze(-1).to(self.device)
         # bootstrap discounted returns with final value estimates
-        value = trainingbuffer.outputs.squeeze()
+        value = trainingbuffer.outputs.squeeze(-1)
         nbatch = done.shape[0]
         nstep = done.shape[1]
         returns = torch.zeros((nbatch,)).to(self.device)

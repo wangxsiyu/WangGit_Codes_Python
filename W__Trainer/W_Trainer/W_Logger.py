@@ -1,8 +1,9 @@
 import torch
+import numpy as np
 
 class W_Logger():
     metadata_logger = {"save_path": None, "save_interval": 1000}
-    info = None
+    info = []
     def __init__(self, param_logger):
         self.metadata_logger.update(param_logger)
         self.last_saved_filename = None
@@ -21,6 +22,15 @@ class W_Logger():
 
     def update(self, reward, info_loss, newdata):
         self.episode += 1
+        info = dict(reward = reward)
+        self.info += [info]
+
+    def getdescription(self):
+        rs = [x['reward'] for x in self.info]
+        smoothstart = max(0, len(rs) - 100)
+        avr = np.mean(rs[smoothstart:])
+        str = f"avR:{avr:.2f}"
+        return str
 
     def save(self, state_dict):
         if self.metadata_logger['save_path'] is not None:

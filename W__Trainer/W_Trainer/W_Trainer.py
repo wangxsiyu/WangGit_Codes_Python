@@ -81,9 +81,7 @@ class W_Trainer(W_Worker):
             if self.gradientclipping is not None:
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.gradientclipping)
             self.optimizer.step()
-            # if tqdmstr is None:
-            #     tqdmstr = f"Process {tqdmpos}"
-            # progress.set_description(f"{tqdmstr}, {self.logger.getdescription()}, Loss: {loss.item():.4f}")
+            progress.set_description(f"{train_mode}, {self.logger.getdescription()}, Loss: {loss.item():.4f}")
             reward, newdata = self.train_generatedata(batch_size, train_mode, is_online)
             self.logger.update(reward, info_loss, newdata)
             self.logger.save(self.model.state_dict())
