@@ -1,5 +1,6 @@
 setup.py
 W_RNN/W_RNN.py
+W_RNN/W_RNN_ActorCritic.py
 W_RNN/W_RNN_gates.py
 W_RNN/__init__.py
 W_RNN.egg-info/PKG-INFO

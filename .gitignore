@@ -1,2 +1,8 @@
 
 *.pyc
+W__Env/W_Env_CognitiveTasks.egg-info/SOURCES.txt
+W__Gym/W_Gym.egg-info/PKG-INFO
+W__Python/W_Python.egg-info/PKG-INFO
+W__RNN/W_RNN.egg-info/PKG-INFO
+W__RNN/W_RNN.egg-info/SOURCES.txt
+W__Trainer/W_Trainer.egg-info/PKG-INFO
