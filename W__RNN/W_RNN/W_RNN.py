@@ -14,13 +14,21 @@ class W_RNN(nn.Module):
         self.actionlayer = self.create_linear(actionlayer)
         self.outputlayer = self.create_linear(outputlayer)
         self.setup_initial_parameters(gatetype, is_param_initial)
-        
+        self.initialize_iolayers()
+
+    def initialize_iolayers(self):
+        torch.nn.init.orthogonal_(self.actionlayer.weight.data)
+        self.actionlayer.bias.data.fill_(0)
+        torch.nn.init.orthogonal_(self.outputlayer.weight.data)
+        self.outputlayer.bias.data.fill_(0)
+
     def setup_initial_parameters(self, gatetype, is_param_initial = True): 
         if gatetype == "LSTM":
             h0 = torch.randn(self.RNN.lstm.hidden_size, requires_grad = is_param_initial).float()
             c0 = torch.randn(self.RNN.lstm.hidden_size, requires_grad = is_param_initial).float()
-            h0 = nn.Parameter(h0)
-            c0 = nn.Parameter(c0)
+            if is_param_initial:
+                h0 = nn.Parameter(h0)
+                c0 = nn.Parameter(c0)
             self.param_initial = [h0, c0]
 
     def create_RNN(self, gatetype, input_len, hidden_len, *arg, **kwarg):
@@ -66,5 +74,5 @@ class W_RNN(nn.Module):
             outputvec = self.outputlayer(feature)
             return actionvec, hidden_state, outputvec
         else:
-            return actionvec, hidden_state, _
+            return actionvec, hidden_state, None
 

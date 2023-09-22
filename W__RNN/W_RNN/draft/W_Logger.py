@@ -17,10 +17,6 @@ class W_Logger():
         self.save_interval = save_interval
         self.smooth_interval = smooth_interval
 
-    def setlog(self, info):
-        if info is not None:
-            print("warning: info overwriten")
-        self.info = info
 
     def init(self, max_episodes):
         nep = max_episodes + 1

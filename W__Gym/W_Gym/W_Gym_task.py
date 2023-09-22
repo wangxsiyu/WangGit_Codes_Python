@@ -62,12 +62,14 @@ class W_Gym_task():
     def __init__(self, n_maxTime = np.Inf, n_maxTrials = np.Inf, n_maxBlocks = np.Inf, \
                     block_n_maxTrials = np.Inf, option_obs_augment = ["reward", "action"], \
                     option_obs_is_flatten = True, is_ITI = True, dt = 1, is_save = False, is_save_table = True, \
-                    param_task = None, *arg, **kwarg):
+                    param_task = None, param_metadata = None, *arg, **kwarg):
         self._param_task = W.W_dict_updateonly(self._param_task, kwarg)
         if param_task is not None:
             self._param_task = W.W_dict_updateonly(self._param_task, param_task)
         _param_inputs = W.W_dict_function_arguments()
         W.W_dict_updateonly(self._metadata_gym, _param_inputs)
+        if param_metadata is not None:
+            W.W_dict_updateonly(self._metadata_gym, param_metadata)
         if self._metadata_gym['option_obs_augment'] is not None:
             self._metadata_gym['option_obs_is_flatten'] = True
         self._time_unit = dt

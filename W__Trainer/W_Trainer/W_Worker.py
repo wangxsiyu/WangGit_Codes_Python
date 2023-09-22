@@ -2,6 +2,9 @@ import numpy as np
 import torch
 from tqdm import tqdm 
 import pandas as pd
+import os
+import re
+from W_Python.W import W
 
 class W_Worker:
     env = None
@@ -10,9 +13,29 @@ class W_Worker:
     device = None
     def __init__(self, env, model, device = "cpu", mode_action = "softmax", *arg, **kwarg):
         self.device = device
-        self.env = env
+        self.reload_env(env)
         self.model = model.to(device)
         self.mode_action = mode_action
+
+    def loaddict_folder_auto(self, currentfolder):
+        traininginfo = None
+        iterid = 0
+        file_trained_list = os.listdir(currentfolder)
+        fs = [re.search("(.*)_(.*).pt", x) for x in file_trained_list]
+        fs = [x for x in fs if x is not None]
+        if not len(fs) == 0:
+            its = [x.group(2) for x in fs]
+            tid = np.argmax([int(x) for x in its])
+            filename = os.path.join(currentfolder, fs[tid].group(0))
+            modeldata = torch.load(filename)
+            print(f"loaded model {filename}")
+            self.model.load_state_dict(modeldata['state_dict'])
+            iterid = int(W.W_str_select_between_patterns(filename, '_', '\.',2))
+            traininginfo = modeldata['training_info']
+        return iterid, traininginfo
+    
+    def reload_env(self, env):
+        self.env = env
 
     def select_action(self, action_vector):
         if self.mode_action == "softmax":

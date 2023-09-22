@@ -19,26 +19,23 @@ class W_Trainer(W_Worker):
     seed = None
     gradientclipping = None
     def __init__(self, env, model, param_loss, param_optim, param_logger = None, param_buffer = None, \
-                 gradientclipping = None, save_path = '', \
+                 gradientclipping = None, \
                  seed = None, *arg, **kwarg):
         super().__init__(env, model, *arg, **kwarg)
-        self.save_path = save_path
-        self.seed = seed
-        self.setup_randomseed()
+        self.setup_randomseed(seed)
         self.gradientclipping = gradientclipping
         self.loss = W_loss(param_loss, device = self.device)
         self.buffer = W_Buffer(param_buffer, device = self.device)
-        param_logger.update(save_path = save_path)
         self.logger = W_Logger(param_logger)
         self.setup_optimizer(param_optim)
 
     def setup_randomseed(self, seed = None):
         if seed is None:
-            seed = self.seed
-        if seed is not None:    
-            torch.manual_seed(seed)
-            np.random.seed(seed)
-            torch.random.manual_seed(seed)
+            seed = 0
+        torch.manual_seed(seed)
+        np.random.seed(seed)
+        torch.random.manual_seed(seed)
+        self.seed = seed
         
     def setup_optimizer(self, param_optim):
         params = list(self.model.parameters())
@@ -63,15 +60,26 @@ class W_Trainer(W_Worker):
         tb = namedtuple('TrainingBuffer', ("action_dist", "action_likelihood","outputs"))
         return tb(action_dist, action_likelihood, buffer.additional_output)
     
-    def train(self, max_episodes = 10, batch_size = 1, train_mode = "RL", is_online = False, \
+    def train(self, savepath = '', max_episodes = 10, batch_size = 1, train_mode = "RL", \
+              is_online = False, is_resume = True, \
               progressbar_position = 0, *arg, **kwarg):
-        tqdmrange = self.logger.initialize(max_episodes)
+        [trainiter, traininginfo] = self.loaddict_folder_auto(currentfolder = savepath)
+        if is_resume:
+            start_episode = trainiter
+        else:
+            start_episode = 0
+        self.logger.setlog(traininginfo)
+        tqdmrange = self.logger.initialize(max_episodes, start_episode)
+        if len(tqdmrange) == 0:
+            print(f'model already trained: total steps = {max_episodes}, skip')
+            return
         if progressbar_position is not None:
             progress = tqdm(tqdmrange, position = progressbar_position, leave=True)
         else:
             progress = tqdmrange
         reward, newdata = self.train_generatedata(batch_size, train_mode, is_online)
-        self.logger.update(reward, None, newdata)
+        self.logger.update0(reward, None, newdata)
+        self.logger.save(savepath, self.model.state_dict())
         for _ in progress:
             batchdata = self.train_getdata(batch_size, train_mode, is_online)
             modelbuffer = self.run_episode_buffer(batchdata)
@@ -84,7 +92,7 @@ class W_Trainer(W_Worker):
             progress.set_description(f"{train_mode}, {self.logger.getdescription()}, Loss: {loss.item():.4f}")
             reward, newdata = self.train_generatedata(batch_size, train_mode, is_online)
             self.logger.update(reward, info_loss, newdata)
-            self.logger.save(self.model.state_dict())
+            self.logger.save(savepath, self.model.state_dict())
                 
     def train_generatedata(self, batch_size, train_mode, is_online, *arg, **kwarg):
         if train_mode == "RL":
