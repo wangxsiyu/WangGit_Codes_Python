@@ -4,30 +4,41 @@ from W_Python.W import W
 import os
 
 class W_Logger():
+    info0 = {'info':[], 'history':[]}
     metadata_logger = {"save_interval": 1000}
     def __init__(self, param_logger):
         self.metadata_logger.update(param_logger)
         self.last_saved_filename = None
-        self.info = []
+        self.info = self.info0.copy()
 
-    def initialize(self, max_episodes, start_episode = 0):
+    def initialize(self, max_episodes, start_episode = 0, info = None):
+        if info is not None:
+            if start_episode == 0:
+                self.info['history'] += [info]
+                self.info['info'] = []
+            else:
+                if self.info != self.info0:
+                    print("warning: overwriting existing info")
+                self.info = info
         self.max_episodes = max_episodes
         self.episode = start_episode
         tqdmrange = range(start_episode, self.max_episodes)
         return tqdmrange
 
-    def update0(self, reward, info_loss, newdata):
-        if len(self.info) == 0:
-            info = dict(reward = reward)
-            self.info += [info]
+    def update0(self, *arg, **kwarg):
+        if len(self.info['info']) == 0:
+            self.update(*arg, **kwarg)
+
+    def update1(self, *arg, **kwarg):
+        self.episode += 1
+        self.update(*arg, **kwarg)
 
     def update(self, reward, info_loss, newdata):
-        self.episode += 1
         info = dict(reward = reward)
-        self.info += [info]
+        self.info['info'] += [info]
 
     def getdescription(self):
-        rs = [x['reward'] for x in self.info]
+        rs = [x['reward'] for x in self.info['info']]
         smoothstart = max(0, len(rs) - 100)
         avr = np.mean(rs[smoothstart:])
         str = f"avR:{avr:.2f}"
@@ -43,11 +54,3 @@ class W_Logger():
                     "state_dict": state_dict,
                     "training_info": self.info,
                 }, save_path)  
-
-    def setlog(self, info = None):
-        if info is None:
-            info = []
-        if self.info is not None:
-            print("warning: overwriting existing info")
-        self.info = info
-

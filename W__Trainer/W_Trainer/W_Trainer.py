@@ -60,16 +60,20 @@ class W_Trainer(W_Worker):
         tb = namedtuple('TrainingBuffer', ("action_dist", "action_likelihood","outputs"))
         return tb(action_dist, action_likelihood, buffer.additional_output)
     
-    def train(self, savepath = '', max_episodes = 10, batch_size = 1, train_mode = "RL", \
-              is_online = False, is_resume = True, \
-              progressbar_position = 0, *arg, **kwarg):
-        [trainiter, traininginfo] = self.loaddict_folder_auto(currentfolder = savepath)
+    def resume_training(self, max_episodes, folder, is_resume = True, model_pretrained = None):
         if is_resume:
-            start_episode = trainiter
-        else:
+            [filename, start_episode] = self.find_latest_model(currentfolder = folder)
+            if start_episode > 0:
+                model_pretrained = filename
+        else:        
             start_episode = 0
-        self.logger.setlog(traininginfo)
-        tqdmrange = self.logger.initialize(max_episodes, start_episode)
+        info = self.load_model(model_pretrained)
+        return self.logger.initialize(max_episodes, start_episode, info)
+        
+    def train(self, savepath = '', max_episodes = 10, batch_size = 1, train_mode = "RL", \
+              is_online = False, is_resume = True, model_pretrained = None, \
+              progressbar_position = 0, *arg, **kwarg):
+        tqdmrange = self.resume_training(max_episodes, savepath, is_resume = is_resume, model_pretrained = model_pretrained)
         if len(tqdmrange) == 0:
             print(f'model already trained: total steps = {max_episodes}, skip')
             return
@@ -78,6 +82,7 @@ class W_Trainer(W_Worker):
         else:
             progress = tqdmrange
         reward, newdata = self.train_generatedata(batch_size, train_mode, is_online)
+        progress.set_description(f"{train_mode}, {self.logger.getdescription()}, start", refresh = False)
         self.logger.update0(reward, None, newdata)
         self.logger.save(savepath, self.model.state_dict())
         for _ in progress:
@@ -89,10 +94,11 @@ class W_Trainer(W_Worker):
             if self.gradientclipping is not None:
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.gradientclipping)
             self.optimizer.step()
-            progress.set_description(f"{train_mode}, {self.logger.getdescription()}, Loss: {loss.item():.4f}")
+            progress.set_description(f"{train_mode}, {self.logger.getdescription()}, Loss: {loss.item():.4f}", refresh = False)
             reward, newdata = self.train_generatedata(batch_size, train_mode, is_online)
-            self.logger.update(reward, info_loss, newdata)
+            self.logger.update1(reward, info_loss, newdata)
             self.logger.save(savepath, self.model.state_dict())
+        progress.set_description(f"{train_mode}, {self.logger.getdescription()}, Loss: {loss.item():.4f}, complete", refresh = True)
                 
     def train_generatedata(self, batch_size, train_mode, is_online, *arg, **kwarg):
         if train_mode == "RL":

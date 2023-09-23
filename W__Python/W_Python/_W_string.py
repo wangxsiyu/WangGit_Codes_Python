@@ -14,12 +14,18 @@ class W_string():
         return [m.start() for m in re.finditer(ptn, mstr)]
 
     def W_str_select_between_patterns(mstr, pt1 = None, pt2 = None, n1 = 1, n2 = 1):
+        ps1 = W_string.W_find_substr(mstr, pt1)
+        ps2 = W_string.W_find_substr(mstr, pt2)
+        if n1 < 0:
+            n1 = len(ps1) + 1 + n1 
+        if n2 < 0:
+            n2 = len(ps2) + 1 + n2
         if pt1 is None:
             p1 = 0
         else:
-            p1 = W_string.W_find_substr(mstr, pt1)[n1-1] + 1
+            p1 = ps1[n1-1] + 1
         if pt2 is None:
             p2 = len(mstr)
         else:
-            p2 = W_string.W_find_substr(mstr, pt2)[n2-1]
+            p2 = ps2[n2-1]
         return mstr[p1:p2]

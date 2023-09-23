@@ -60,18 +60,25 @@ class W_Training_Curriculum():
             yaml.dump(curriculum, fout)
         
     def train(self, seed = 0):
+        is_resume = self.trainerinfo['trainer']['is_resume']
         self.trainer.setup_randomseed(seed)
-        for i in range(self.n_course):
-            self.train_course(i, seed)
-
-    def train_course(self, coursei, seed = 0):
-        savepath = os.path.join(self.trainerinfo['save_path'], f"Seed{seed}")
-        savepath = W.W_mkdir(os.path.join(savepath, f"C{coursei}_{self.curriculum[coursei]['coursename']}"))
-        self.trainer.reload_env(self.env[coursei])
-        self.trainer.train(savepath = savepath, max_episodes= self.curriculum[coursei]['train_episodes'], \
-                           batch_size= self.trainerinfo['trainer']['batch_size'], \
-                           train_mode= self.trainerinfo['trainer']['train_mode'], \
-                           is_online= self.trainerinfo['trainer']['is_online'], \
-                           is_resume = self.trainerinfo['trainer']['is_resume'])
+        lastfile = None
+        for coursei in range(self.n_course):
+            savepath = os.path.join(self.trainerinfo['save_path'], f"Seed{seed}")
+            savepath = W.W_mkdir(os.path.join(savepath, f"C{coursei}_{self.curriculum[coursei]['coursename']}"))
+            self.trainer.reload_env(self.env[coursei])
+            max_episodes = self.curriculum[coursei]['train_episodes']
+            [currentfile, start_episode] = self.trainer.find_latest_model(savepath)
+            if is_resume and start_episode == max_episodes: # done training
+                lastfile = currentfile
+                print(f"course {coursei} trained already: skip")
+            else:
+                print(f"training course {coursei}")
+                self.trainer.train(savepath = savepath, max_episodes= max_episodes, \
+                            batch_size= self.trainerinfo['trainer']['batch_size'], \
+                            train_mode= self.trainerinfo['trainer']['train_mode'], \
+                            is_online= self.trainerinfo['trainer']['is_online'], \
+                            is_resume = is_resume, \
+                            model_pretrained = lastfile)
 
 

@@ -17,9 +17,7 @@ class W_Worker:
         self.model = model.to(device)
         self.mode_action = mode_action
 
-    def loaddict_folder_auto(self, currentfolder):
-        traininginfo = None
-        iterid = 0
+    def find_latest_model(self, currentfolder):
         file_trained_list = os.listdir(currentfolder)
         fs = [re.search("(.*)_(.*).pt", x) for x in file_trained_list]
         fs = [x for x in fs if x is not None]
@@ -27,12 +25,21 @@ class W_Worker:
             its = [x.group(2) for x in fs]
             tid = np.argmax([int(x) for x in its])
             filename = os.path.join(currentfolder, fs[tid].group(0))
+            iterid = int(W.W_str_select_between_patterns(filename, '_', '\.',-1,-1))
+        else:
+            filename = None
+            iterid = 0
+        return filename, iterid
+    
+    def load_model(self, filename):
+        if filename is not None:
             modeldata = torch.load(filename)
             print(f"loaded model {filename}")
             self.model.load_state_dict(modeldata['state_dict'])
-            iterid = int(W.W_str_select_between_patterns(filename, '_', '\.',2))
             traininginfo = modeldata['training_info']
-        return iterid, traininginfo
+        else:
+            traininginfo = None
+        return traininginfo
     
     def reload_env(self, env):
         self.env = env
