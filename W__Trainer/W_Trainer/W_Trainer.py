@@ -82,7 +82,7 @@ class W_Trainer(W_Worker):
         else:
             progress = tqdmrange
         reward, newdata = self.train_generatedata(batch_size, train_mode, is_online)
-        progress.set_description(f"{train_mode}, {self.logger.getdescription()}, start", refresh = False)
+        # progress.set_description(f"{train_mode}, {self.logger.getdescription()}, start", refresh = False)
         self.logger.update0(reward, None, newdata)
         self.logger.save(savepath, self.model.state_dict())
         for _ in progress:
@@ -98,7 +98,7 @@ class W_Trainer(W_Worker):
             reward, newdata = self.train_generatedata(batch_size, train_mode, is_online)
             self.logger.update1(reward, info_loss, newdata)
             self.logger.save(savepath, self.model.state_dict())
-        progress.set_description(f"{train_mode}, {self.logger.getdescription()}, Loss: {loss.item():.4f}, complete", refresh = True)
+        # progress.set_description(f"{train_mode}, {self.logger.getdescription()}, Loss: {loss.item():.4f}, complete", refresh = True)
                 
     def train_generatedata(self, batch_size, train_mode, is_online, *arg, **kwarg):
         if train_mode == "RL":
