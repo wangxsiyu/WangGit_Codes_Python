@@ -6,8 +6,8 @@ import numpy as np
 
 class task_TwoStep(W_Gym):
     _param_task = {'p_switch_reward': 0, 'p_switch_transition': 0, \
-                  'ps_high_state':[0.8], 'ps_low_state':None, \
-                  'ps_common_trans':[0.8], 'ps_ambiguity': [0], \
+                  'ps_high_state':[1], 'ps_low_state':None, \
+                  'ps_common_trans':[1], 'ps_ambiguity': [0], \
                   'is_random_common0': False, \
                   }
     
