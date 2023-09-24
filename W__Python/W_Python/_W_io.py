@@ -9,6 +9,7 @@ class W_io():
         while not os.path.exists(folder[-1]):
             folder += [W_io.W_foldernames(folder[-1])]           
         for i in reversed(range(len(folder)-1)):
-            os.mkdir(folder[i])
+            if not os.path.exists(folder[i]):
+                os.mkdir(folder[i])
         return folder0
 
