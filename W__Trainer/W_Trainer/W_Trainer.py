@@ -106,7 +106,11 @@ class W_Trainer(W_Worker):
                 self.buffer.clear_buffer()
                 reward, data = self.work(n_episode = batch_size, *arg, **kwarg)
             else: # create 1 experience, and resample from the memory buffer
-                reward, data = self.work(n_episode = 1, *arg, **kwarg)
+                if len(self.buffer.memory) == 0:
+                    reward, data = self.work(n_episode = batch_size, *arg, **kwarg)
+                else:
+                    reward, data = self.work(n_episode = 1, *arg, **kwarg)
+                    
         elif train_mode == "supervised":
             if self.logger.supervised_test_interval is not None and self.logger.episode % self.logger.supervised_test_interval == 0:
                 reward, data = self.work(n_episode = 1, *arg, **kwarg)
