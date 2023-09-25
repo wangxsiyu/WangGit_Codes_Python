@@ -1,8 +1,6 @@
 import numpy as np
 import random 
 from W_Python.W import W
-import torch
-import pandas as pd
 
 class W_Buffer:
     memory = []
@@ -16,15 +14,6 @@ class W_Buffer:
 
     def clear_buffer(self):
         self.memory = []
-
-    def load(self, file):
-        d = pd.read_csv(file)
-        colnames = list(d.keys())
-        colid = np.where(np.array([x.find('obs') for x in colnames]) == 0)[0]
-        obs = d.iloc[:, colid]
-        action = d.action.to_numpy()
-        # need edits
-        pass
     
     def push(self, data):
         data = W.W_enlist(data)

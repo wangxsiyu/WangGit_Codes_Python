@@ -6,8 +6,11 @@ from .W_Buffer import W_Buffer
 from W_Python.W import W
 from tqdm import tqdm 
 import torch
+import pandas as pd
 import numpy as np
 from collections import namedtuple 
+import os
+import pickle        
 
 class W_Trainer(W_Worker): 
     # env
@@ -58,7 +61,7 @@ class W_Trainer(W_Worker):
         action_onehot = W.W_onehot_array(buffer.action.squeeze(), action_dist.shape[-1]).to(self.device)
         action_likelihood = (action_dist * action_onehot).sum(-1)
         tb = namedtuple('TrainingBuffer', ("action_dist", "action_likelihood","outputs"))
-        return tb(action_dist, action_likelihood, buffer.additional_output)
+        return tb(action_dist, action_likelihood, additional_output)
     
     def resume_training(self, max_episodes, folder, is_resume = True, model_pretrained = None):
         if is_resume:
@@ -76,7 +79,7 @@ class W_Trainer(W_Worker):
               progressbar_position = 0, *arg, **kwarg):
         self.buffer.clear_buffer()
         if train_mode == "supervised":
-            self.buffer.load(supervised_data_path)
+            self.train_load_supervised(supervised_data_path)
         tqdmrange = self.resume_training(max_episodes, savepath, is_resume = is_resume, model_pretrained = model_pretrained)
         if len(tqdmrange) == 0:
             print(f'model already trained: total steps = {max_episodes}, skip')
@@ -123,6 +126,83 @@ class W_Trainer(W_Worker):
                 reward = np.NaN
                 data = None
         return reward, data
+
+    def loadandsave_supervised(self, file):
+        d = pd.read_csv(file)
+        colnames = list(d.keys())
+        episodes = np.unique(d.episodeID)
+        n_episodes = len(episodes)
+        data = []
+        progress_load = tqdm(range(n_episodes))
+        progress_load.set_description(f'loading supervised data')
+        for i in progress_load:
+            rid = d.episodeID == episodes[i]
+            td = d.loc[rid,:]
+            tdata = self.train_load_supervised_episode(td.to_dict('records'))
+            keys = list(tdata.keys())
+            for x in keys:
+                if all([None == i for i in tdata[x]]):
+                    # print(f"no {x}: skipped")
+                    tdata.pop(x)
+                else:
+                    tdata[x] = torch.concat(tdata[x]).float()
+            data.append(tdata)
+        
+        savename = os.path.exists(os.path.splitext(file)[0] + ".pkl")
+        with open('my_object.pkl', 'wb') as f:
+            pickle.dump(data, f)
+        return data
+
+    def train_load_supervised(self, file): 
+        file_preload = os.path.splitext(file)[0] + ".pkl"
+        if os.path.exists(file_preload):
+            with open(file_preload, 'rb') as f:
+                data = pickle.load(f)
+        else:
+            data = self.loadandsave_supervised(file) 
+        self.buffer.push(data)   
+
+    def train_load_supervised_episode(self, superviseddata):
+        done = False
+        data = {'obs':[], 'reward':[], 'action':[], 'obs_next':[], 'timestep':[], \
+                'isdone': [], 'additional_output':[]}
+        superviseddata[0]['last_action'] = None
+        superviseddata[0]['last_reward'] = 0
+        obs, additional_output = self.env.format_supervised(superviseddata[0])
+        obs = torch.from_numpy(obs).unsqueeze(0).float()
+        for i in range(len(superviseddata)):
+            data['obs'].append(obs)
+            data['additional_output'].append(additional_output)
+
+            if i + 1 < len(superviseddata):
+                superviseddata[i+1]['last_action'] = superviseddata[i]['action']
+                superviseddata[i+1]['last_reward'] = superviseddata[i]['reward'] 
+                obs_next, additional_output = self.env.format_supervised(superviseddata[i+1])
+                obs_next = torch.from_numpy(obs_next).unsqueeze(0).float()
+            else:
+                obs_next = obs
+                additional_output = None
+            data['obs_next'].append(obs_next)
+            obs = obs_next
+            
+            action = superviseddata[i]['action']
+            data['action'].append(torch.tensor(action).unsqueeze(0).unsqueeze(0))
+
+            reward = superviseddata[i]['reward']
+            data['reward'].append(torch.tensor(float(reward)).unsqueeze(0).unsqueeze(0))
+            
+            if 'timestep' in superviseddata[i]:
+                timestep = superviseddata[i]['timestep']
+            else:
+                timestep = i
+            data['timestep'].append(torch.tensor(timestep).unsqueeze(0).unsqueeze(0))
+
+            if 'isdone' in superviseddata[i]:
+                isdone = superviseddata[i]['isdone']
+            else:
+                isdone = 1 if i + 1 == len(superviseddata) else 0
+            data['isdone'].append(torch.tensor(isdone).unsqueeze(0).unsqueeze(0))
+        return data
 
     def train_getdata(self, batch_size, train_mode, is_online, *arg, **kwarg):
         if train_mode == "RL":          

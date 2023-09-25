@@ -21,6 +21,16 @@ class task_Tokens(W_Gym_Grid2D):
                         state_timelimits = "ones")        
         self.setup_human_keys_auto('binary')
 
+    def format_supervised(self, data):
+        IMid = np.array([data['cueLR_1'], data['cueLR_2']])
+        for i in range(2):
+            tstr = "image" + str(IMid[i])
+            self.draw_onehot_2D((0, i*2), tstr)
+        self.flip()
+        self._last_action_motor = data['last_action']
+        self._last_reward = data['last_reward']
+        return self._get_obs(), None
+
     def custom_reset(self):
         self._env_vars['tokens'] = 0
 

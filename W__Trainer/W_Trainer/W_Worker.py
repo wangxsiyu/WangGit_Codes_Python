@@ -158,12 +158,17 @@ class W_Worker:
             data['reward'].append(torch.tensor(float(reward)).unsqueeze(0).unsqueeze(0))
             data['timestep'].append(torch.tensor(timestep).unsqueeze(0).unsqueeze(0))
             data['isdone'].append(torch.tensor(done).unsqueeze(0).unsqueeze(0))
+            # if additional_output is not None:
             data['additional_output'].append(additional_output)
             obs = obs_new
             total_reward += reward
         keys = list(data.keys())
         for x in keys:
-            data[x] = torch.concat(data[x]).float()
+            if all([None == i for i in data[x]]):
+                # print(f"no {x}: skipped")
+                data.pop(x)
+            else:
+                data[x] = torch.concat(data[x]).float()
         # d = [np.array(x, dtype = 'float') for x in arg]
         return total_reward, data
     
