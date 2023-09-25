@@ -6,7 +6,7 @@ import numpy as np
 
 class task_Pavlovian(W_Gym):
     _param_task = {'baseline': 5, 'CS_duration': 1, \
-                  'CS_US_delay': 5, "max_US": 1}
+                  'CS_US_delay': 5, "max_US": 1, 'action_delay': 3}
     def __init__(self, is_ITI = False, *arg, **kwarg):
         super().__init__(is_ITI = is_ITI, *arg, **kwarg)
         self.env_name = "Pavlovian"
@@ -23,7 +23,15 @@ class task_Pavlovian(W_Gym):
         self.setup_state_parameters(state_names=state_names, \
                                     state_timelimits = state_timelimits)
         self.setup_human_keys_auto('binary')
-                                      
+
+    def transform_actions(self, action_motor):
+        self._env_vars['action_history'] += [action_motor]
+        action = self._env_vars['action_history'].pop(0)
+        return action
+
+    def custom_reset_trial(self):
+        self._env_vars['action_history'] = W.W_enlist(np.zeros(self._param_task['action_delay'], dtype = 'int'))
+
     def custom_step_reward(self, action):
         reward = 0
         if self._metadata_state['statenames'][self._state] == "US" and action == 1:

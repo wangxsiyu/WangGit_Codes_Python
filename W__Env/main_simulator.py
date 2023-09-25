@@ -4,8 +4,8 @@ from W_Env.W_Env_Simulator import W_Env_Simulator
 if __name__ == "__main__": 
     render_mode = "human"
     n_maxTrials = 100
-    envname = input("input environment name:")
-    # envname = "Pavlovian"
+    # envname = input("input environment name:")
+    envname = "Pavlovian"
     # envname = "Tokens"
     # envname = "GoalsActions"
     # envname = "TwoStep"
