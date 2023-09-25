@@ -106,7 +106,8 @@ class W_Trainer(W_Worker):
             self.logger.update1(reward, info_loss, newdata)
             self.logger.save(savepath, self.model.state_dict())
         # progress.set_description(f"{train_mode}, {self.logger.getdescription()}, Loss: {loss.item():.4f}, complete", refresh = True)
-                
+        progress.close()
+
     def train_generatedata(self, batch_size, train_mode, is_online, *arg, **kwarg):
         if train_mode == "RL":
             if is_online: # create new experience for each batch
@@ -139,17 +140,11 @@ class W_Trainer(W_Worker):
             rid = d.episodeID == episodes[i]
             td = d.loc[rid,:]
             tdata = self.train_load_supervised_episode(td.to_dict('records'))
-            keys = list(tdata.keys())
-            for x in keys:
-                if all([None == i for i in tdata[x]]):
-                    # print(f"no {x}: skipped")
-                    tdata.pop(x)
-                else:
-                    tdata[x] = torch.concat(tdata[x]).float()
             data.append(tdata)
+        progress_load.close()
         
-        savename = os.path.exists(os.path.splitext(file)[0] + ".pkl")
-        with open('my_object.pkl', 'wb') as f:
+        savename = os.path.splitext(file)[0] + ".pkl"
+        with open(savename, 'wb') as f:
             pickle.dump(data, f)
         return data
 
@@ -202,6 +197,15 @@ class W_Trainer(W_Worker):
             else:
                 isdone = 1 if i + 1 == len(superviseddata) else 0
             data['isdone'].append(torch.tensor(isdone).unsqueeze(0).unsqueeze(0))
+
+        keys = list(data.keys())
+        for x in keys:
+            if all([None == i for i in data[x]]):
+                # print(f"no {x}: skipped")
+                data.pop(x)
+            else:
+                data[x] = torch.concat(data[x]).float()
+
         return data
 
     def train_getdata(self, batch_size, train_mode, is_online, *arg, **kwarg):
