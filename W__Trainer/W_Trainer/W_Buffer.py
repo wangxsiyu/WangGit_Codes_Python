@@ -1,5 +1,4 @@
 import numpy as np
-from collections import namedtuple 
 import random 
 from W_Python.W import W
 import torch
@@ -11,7 +10,6 @@ class W_Buffer:
         self.device = device
         param = {"capacity": np.Inf, "mode_sample": "random"}
         param.update(param_buffer)
-        self.memory = []
         self.capacity = param_buffer['capacity']
         self.mode_sample = param_buffer['mode_sample']
         self.clear_buffer()
@@ -43,15 +41,7 @@ class W_Buffer:
             d = self.sample_random(n)
         elif mode_sample == "all":
             d = self.memory
-            
-        keys = list(d[0].keys())
-        tuple_buffer = namedtuple('Buffer', keys)
-        
-        buffer = []
-        for i in keys:
-            buffer += [torch.concat([x[i].unsqueeze(0) for x in d])]
-        
-        out = tuple_buffer(*buffer)
+        out = W.W_list_of_dict_to_namedtuple(d)
         return out
     
     def sample_last(self, n = 1):
