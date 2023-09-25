@@ -40,7 +40,7 @@ class W_Logger():
     def getdescription(self):
         rs = [x['reward'] for x in self.info['info']]
         smoothstart = max(0, len(rs) - self.metadata_logger['output_smooth'])
-        avr = np.mean(rs[smoothstart:])
+        avr = np.nanmean(rs[smoothstart:])
         str = f"avR:{avr:.2f}"
         return str
 
