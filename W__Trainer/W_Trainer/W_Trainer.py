@@ -128,6 +128,15 @@ class W_Trainer(W_Worker):
                 data = None
         return reward, data
 
+    def train_load_supervised(self, file): 
+        file_preload = os.path.splitext(file)[0] + ".pkl"
+        if os.path.exists(file_preload):
+            with open(file_preload, 'rb') as f:
+                data = pickle.load(f)
+        else:
+            data = self.loadandsave_supervised(file) 
+        self.buffer.push(data)   
+        
     def loadandsave_supervised(self, file):
         d = pd.read_csv(file)
         colnames = list(d.keys())
@@ -147,15 +156,6 @@ class W_Trainer(W_Worker):
         with open(savename, 'wb') as f:
             pickle.dump(data, f)
         return data
-
-    def train_load_supervised(self, file): 
-        file_preload = os.path.splitext(file)[0] + ".pkl"
-        if os.path.exists(file_preload):
-            with open(file_preload, 'rb') as f:
-                data = pickle.load(f)
-        else:
-            data = self.loadandsave_supervised(file) 
-        self.buffer.push(data)   
 
     def train_load_supervised_episode(self, superviseddata):
         done = False
