@@ -8,7 +8,7 @@ class task_Tokens(W_Gym_Grid2D):
                    }
     def __init__(self, **kwarg):
         super().__init__(1,3,4, key_preset = "binary", is_ITI = False, n_maxTrialsPerBlock = 180, \
-                         option_obs_augment = ["tokens", "reward", "action"], **kwarg)
+                         option_obs_augment = ["tokens", "reward", "motor"], **kwarg)
         self._param_task['CueValues'] = np.array(self._param_task['CueValues'])
         # set action space
         # stay, left, right

@@ -13,7 +13,7 @@ def getmodel(modelinfo, env, device):
     ldic = locals()
     exec(f"from W_RNN.{model_name} import {model_name} as W_model", globals(), ldic)
     W_model = ldic['W_model']
-    info = modelinfo['param_model']
+    info = modelinfo['param_model'].copy()
     info.update({'env': env})
     model = W_model(info_model = info, device = device)
     return model
@@ -74,11 +74,20 @@ class W_Training_Curriculum():
                 print(f"course {coursei} trained already: skip")
             else:
                 print(f"training course {coursei}")
+                if 'is_online' in self.trainerinfo['trainer'].keys():
+                    is_online = self.trainerinfo['trainer']['is_online']
+                else:
+                    is_online = False
+                if 'supervised_data_path' in self.trainerinfo['trainer'].keys():
+                    supervised_data_path = self.trainerinfo['trainer']['supervised_data_path']
+                else:
+                    supervised_data_path = None
                 self.trainer.train(savepath = savepath, max_episodes= max_episodes, \
                             batch_size= self.trainerinfo['trainer']['batch_size'], \
                             train_mode= self.trainerinfo['trainer']['train_mode'], \
-                            is_online= self.trainerinfo['trainer']['is_online'], \
+                            is_online= is_online, \
                             is_resume = is_resume, \
-                            model_pretrained = lastfile)
+                            model_pretrained = lastfile, \
+                            supervised_data_path = supervised_data_path)
 
 

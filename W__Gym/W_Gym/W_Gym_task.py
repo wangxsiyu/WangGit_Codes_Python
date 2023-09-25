@@ -36,6 +36,7 @@ class W_Gym_task():
     # gym variables
     _obs = None # observation
     _last_action = None
+    _last_action_motor = None
     _last_reward = 0
     _env_vars = {} # environment moment-by-moment variables (saved)
     _env_vars_after = {} # environment variables after update (saved)
@@ -307,6 +308,7 @@ class W_Gym_task():
             reward += treward
             is_done = is_done or t_is_done
         
+        self._last_action_motor = action_motor
         self._last_action = action
         self._last_reward = reward
         tdata.update(self._env_vars_after)
@@ -356,7 +358,9 @@ class W_Gym_task():
         if option_obs_augment is not None:
             for opt_name in iter(option_obs_augment):
                 if opt_name == "action": 
-                    tval = W.W_onehot(self._last_action, self.get_n_actions())
+                    tval = W.W_onehot(self._last_action, self.get_n_actions(is_motor=False))
+                elif opt_name == "motor":
+                    tval = W.W_onehot(self._last_action_motor, self.get_n_actions(is_motor=True))
                 elif opt_name == "reward":
                     tval = np.array(self._last_reward)
                     tval = tval.reshape((1,))
@@ -371,9 +375,13 @@ class W_Gym_task():
             obs = self.custom_format_obs_for_save(obs)
         return obs.flatten()
     
-    def get_n_actions(self):
-        assert hasattr(self, 'n_actions')
-        return self.n_actions
+    def get_n_actions(self, is_motor = False):
+        if is_motor:
+            assert hasattr(self, 'n_motor')
+            return self.n_motor
+        else:
+            assert hasattr(self, 'n_actions')
+            return self.n_actions
         #    return self.action_space.n
 
     def get_n_obs(self, is_count_augmented_dimensions = True):
@@ -388,7 +396,9 @@ class W_Gym_task():
         if is_count_augmented_dimensions and self._metadata_gym['option_obs_augment'] is not None:
             for opt_name in iter(self._metadata_gym['option_obs_augment']):
                 if opt_name == "action": 
-                    len += self.get_n_actions()
+                    len += self.get_n_actions(is_motor=False)
+                elif opt_name == "motor":
+                    len += self.get_n_actions(is_motor=True)
                 elif opt_name == "reward":
                     len += 1
                 else:

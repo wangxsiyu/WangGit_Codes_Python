@@ -45,7 +45,6 @@ class W_Gym_Grid2D(W_Gym):
         n_motor = self.setup_key_Grid2D(key_preset)
         self.setup_action_dim(nx * ny, n_motor)
         self.gaze = Grid2D(0,nx-1,0,ny-1) # action object
-        self.n_actions = nx * ny
         self.plot_position = self.pos_grid(nx, ny) * self._metadata_render['window_size'] # x is row (which is dimension 1), y is column (which is dimension 0)
         
     def setup_key_Grid2D(self, key_preset):

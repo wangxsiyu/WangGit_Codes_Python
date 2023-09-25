@@ -70,11 +70,13 @@ class W_Trainer(W_Worker):
         info = self.load_model(model_pretrained)
         return self.logger.initialize(max_episodes, start_episode, info)
         
-    def train(self, savepath = '', max_episodes = 10, batch_size = 1, train_mode = "RL", \
+    def train(self, savepath = '', max_episodes = 10, batch_size = 1, \
+              train_mode = "RL", supervised_data_path = None, \
               is_online = False, is_resume = True, model_pretrained = None, \
               progressbar_position = 0, *arg, **kwarg):
-        if train_mode != "supervised":
-            self.buffer.clear_buffer()
+        self.buffer.clear_buffer()
+        if train_mode == "supervised":
+            self.buffer.load(supervised_data_path)
         tqdmrange = self.resume_training(max_episodes, savepath, is_resume = is_resume, model_pretrained = model_pretrained)
         if len(tqdmrange) == 0:
             print(f'model already trained: total steps = {max_episodes}, skip')

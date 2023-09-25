@@ -10,7 +10,7 @@ class W_RNN_ActorCritic(W_RNN):
             env = info_model['env']
             input_len = env.get_n_obs()
             hidden_len = info_model['mem-units']
-            output_len = env.get_n_actions()
+            output_len = env.get_n_actions(is_motor = True)
             super().__init__(input_len, hidden_len, \
                                     gatetype = info_model['gatetype'], \
                                     actionlayer = output_len, \
