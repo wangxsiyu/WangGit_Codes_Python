@@ -13,6 +13,6 @@ class W_loss(W_loss_A2C):
     def loss(self, *arg, **kwarg):
         if self.loss_name == "A2C":
             return self.loss_A2C(*arg, **kwarg)   
-        # elif self.loss_name == "A2C_supervised":
-        #     return self.loss_A2C_supervised(*arg, **kwarg)     
+        elif self.loss_name == "A2C_supervised":
+            return self.loss_A2C_supervised(*arg, **kwarg)     
        

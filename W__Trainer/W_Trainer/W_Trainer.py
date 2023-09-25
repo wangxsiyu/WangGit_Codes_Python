@@ -73,6 +73,8 @@ class W_Trainer(W_Worker):
     def train(self, savepath = '', max_episodes = 10, batch_size = 1, train_mode = "RL", \
               is_online = False, is_resume = True, model_pretrained = None, \
               progressbar_position = 0, *arg, **kwarg):
+        if train_mode != "supervised":
+            self.buffer.clear_buffer()
         tqdmrange = self.resume_training(max_episodes, savepath, is_resume = is_resume, model_pretrained = model_pretrained)
         if len(tqdmrange) == 0:
             print(f'model already trained: total steps = {max_episodes}, skip')
@@ -109,15 +111,15 @@ class W_Trainer(W_Worker):
                 if len(self.buffer.memory) == 0:
                     reward, data = self.work(n_episode = batch_size, *arg, **kwarg)
                 else:
-                    reward, data = self.work(n_episode = 1, *arg, **kwarg)
-                    
+                    reward, data = self.work(n_episode = 1, *arg, **kwarg) 
+            self.buffer.push(data)                   
         elif train_mode == "supervised":
-            if self.logger.supervised_test_interval is not None and self.logger.episode % self.logger.supervised_test_interval == 0:
+            if self.logger.metadata_logger['supervised_test_interval'] is not None and \
+                self.logger.episode % self.logger.metadata_logger['supervised_test_interval'] == 0:
                 reward, data = self.work(n_episode = 1, *arg, **kwarg)
             else:
                 reward = np.NaN
                 data = None
-        self.buffer.push(data)
         return reward, data
 
     def train_getdata(self, batch_size, train_mode, is_online, *arg, **kwarg):
@@ -127,7 +129,7 @@ class W_Trainer(W_Worker):
             else:
                 batchdata = self.buffer.sample(batch_size)
         elif train_mode == "supervised":
-            batchdata = self.buffer.sample(batch_size)
+            batchdata = self.buffer.sample(batch_size, 'random')
             # tid = np.random.choice(self.training_memory.reward.shape[0], batch_size)
             # buffer = [x[tid] for x in self.training_memory]
             # buffer = self.memory.tuple(*buffer)

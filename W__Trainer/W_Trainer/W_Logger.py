@@ -5,7 +5,7 @@ import os
 
 class W_Logger():
     info0 = {'info':[], 'history':[]}
-    metadata_logger = {"save_interval": 1000, 'output_smooth': 100}
+    metadata_logger = {"save_interval": 1000, 'output_smooth': 100, 'supervised_test_interval': None}
     def __init__(self, param_logger):
         self.metadata_logger.update(param_logger)
         self.last_saved_filename = None

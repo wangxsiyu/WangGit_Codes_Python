@@ -61,9 +61,9 @@ class W_Training_Curriculum():
         
     def train(self, seed = 0):
         is_resume = self.trainerinfo['trainer']['is_resume']
-        self.trainer.setup_randomseed(seed)
         lastfile = None
         for coursei in range(self.n_course):
+            self.trainer.setup_randomseed(seed)
             savepath = os.path.join(self.trainerinfo['save_path'], f"Seed{seed}")
             savepath = W.W_mkdir(os.path.join(savepath, f"C{coursei}_{self.curriculum[coursei]['coursename']}"))
             self.trainer.reload_env(self.env[coursei])
