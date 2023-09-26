@@ -5,10 +5,10 @@ import random
 
 class task_Tokens(W_Gym_Grid2D):
     _param_task = {'p_reward': 1, 'CueValues': np.array([1,2,-1,-2]), 'endowment': 0, \
-                   }
-    def __init__(self, **kwarg):
+                   'rewardtype': 'juice'}
+    def __init__(self, *arg, **kwarg):
         super().__init__(1,3,4, key_preset = "binary", is_ITI = False, n_maxTrialsPerBlock = 180, \
-                         option_obs_augment = ["tokens", "reward", "motor"], **kwarg)
+                         option_obs_augment = ["tokens", "reward", "motor"], *arg, **kwarg)
         self._param_task['CueValues'] = np.array(self._param_task['CueValues'])
         # set action space
         # stay, left, right
@@ -83,15 +83,20 @@ class task_Tokens(W_Gym_Grid2D):
         # register pos choice 1 and choice 2
         if self._metadata_state['statenames'][self._state] == "choice":
             self._env_vars['choice'] = int(action/2)      
-            self.update_tokens(self._param_trial['R_side'][self._env_vars['choice']])
+            Rtoken = self.update_tokens(self._param_trial['R_side'][self._env_vars['choice']])
             if self._param_trial['is_cashout']:
-                R = self.cashout()
+                Rjuice = self.cashout()
+            else:
+                Rjuice = 0
+            R = Rtoken if self._param_task['rewardtype'] == "tokens" else Rjuice
         return R
 
     def update_tokens(self, tokenchange): 
+        token_before = self._env_vars['tokens']
         self._env_vars['tokens'] += tokenchange
         self._env_vars['tokens'] = np.max([self._env_vars['tokens'],0])
         self._env_vars_after['tokens_after'] = self._env_vars['tokens']
+        return self._env_vars['tokens'] - token_before
     
     def cashout(self):
         R = self._env_vars['tokens']

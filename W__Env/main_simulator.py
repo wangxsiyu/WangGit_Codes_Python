@@ -5,8 +5,8 @@ if __name__ == "__main__":
     render_mode = "human"
     n_maxTrials = 100
     # envname = input("input environment name:")
-    envname = "Pavlovian"
-    # envname = "Tokens"
+    # envname = "Pavlovian"
+    envname = "Tokens"
     # envname = "GoalsActions"
     # envname = "TwoStep"
     env = W_Env(envname = envname, render_mode = render_mode, \
