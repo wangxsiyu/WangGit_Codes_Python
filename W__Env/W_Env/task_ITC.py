@@ -62,7 +62,7 @@ class task_ITC(W_Gym):
             is_error = True 
         return is_error, R, is_done
 
-    def custom_step_reward_newstate(self, action):
+    def custom_step_reward_newstate(self, action): # draft
         R = 0
         # get reward
         if not self.trial_is_error and self.trial_choice == "accept" and \
