@@ -47,17 +47,17 @@ class task_ITC(W_Gym):
             self._metadata_state['state_timelimits'][sid] = self._param_trial['delay']
         return R
     
-    def custom_state_transition(self):
+    def custom_state_transition(self, action, is_effective = True):
         if self._metadata_state['statenames'][self._state] == "red":
-            stage = self._find_state('ITI')
+            state = self._advance_trial()
         elif self._metadata_state['statenames'][self._state] == "purple":
-            stage = self._find_state('green')
+            state = self._go_to_state('green')
         else:
-            stage = self.stage + 1
+            state = self._state + 1
 
-        if stage < len(self._metadata_state['statenames']) and self._metadata_state['statenames'][_state] == "purple_overtime":
+        if state < len(self._metadata_state['statenames']) and self._metadata_state['statenames'][state] == "purple_overtime":
             is_error = True 
-        return stage
+        return is_error, R, is_done
 
     def _step_after(self, action):
         R_ext = 0

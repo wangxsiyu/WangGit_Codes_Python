@@ -283,7 +283,7 @@ class W_Gym_task():
             reward += treward
         # get consequences of actions (state transition)
         if hasattr(self, 'custom_state_transition'):
-            is_error, treward, t_is_done = self.custom_state_transition()
+            is_error, treward, t_is_done = self.custom_state_transition(action, is_effective = is_effective)
         elif not is_error:
             # determine if state-transition occurs
             is_transition = False
