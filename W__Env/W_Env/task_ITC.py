@@ -48,26 +48,27 @@ class task_ITC(W_Gym):
         return R
     
     def custom_state_transition(self, action, is_effective = True):
-        if self._metadata_state['statenames'][self._state] == "red":
-            state = self._advance_trial()
-        elif self._metadata_state['statenames'][self._state] == "purple":
-            state = self._go_to_state('green')
+        is_error = False
+        R = 0
+        is_done = False
+        if self._metadata_state['statenames'][self._state] == "red" and is_effective:
+            is_done = self._advance_trial()
+        elif self._metadata_state['statenames'][self._state] == "purple" and is_effective:
+            self._go_to_state('green')
         else:
-            state = self._state + 1
+            R, is_done = self._auto_state_transition()
 
-        if state < len(self._metadata_state['statenames']) and self._metadata_state['statenames'][state] == "purple_overtime":
+        if self._metadata_state['statenames'][self._state] == "purple_overtime":
             is_error = True 
         return is_error, R, is_done
 
-    def _step_after(self, action):
-        R_ext = 0
-        R_int = 0
-
+    def custom_step_reward_newstate(self, action):
+        R = 0
         # get reward
         if not self.trial_is_error and self.trial_choice == "accept" and \
             self._metadata_state['statenames'][self._state] == "ITI":
-            R_ext += self.param_trial['drop'] * self.Rewards['R_reward']
-        return R_ext, R_int
+            R += self.param_trial['drop'] * self.Rewards['R_reward']
+        return RR
 
     def _draw_obs(self):
         if self._metadata_state['statenames'][self._state] == "image":
