@@ -75,4 +75,7 @@ class W_RNN(nn.Module):
             return actionvec, hidden_state, outputvec
         else:
             return actionvec, hidden_state, None
+        
+    def get_latent_units(self, LV):
+        return LV[0]
 

@@ -1,24 +1,14 @@
-from W_Env.W_Env import W_Env
-from W_Trainer.W_Trainer import W_Trainer
+from .W_Trainer import W_Trainer
+from .W_Trainer_pipeline_base import W_trainer_pipeline_base
 from W_Python.W import W
 import yaml
-import torch
 import numpy as np
 import sys
 np.set_printoptions(threshold=sys.maxsize)
 import os
 
-def getmodel(modelinfo, env, device):
-    model_name = modelinfo['name']
-    ldic = locals()
-    exec(f"from W_RNN.{model_name} import {model_name} as W_model", globals(), ldic)
-    W_model = ldic['W_model']
-    info = modelinfo['param_model'].copy()
-    info.update({'env': env})
-    model = W_model(info_model = info, device = device)
-    return model
 
-class W_Training_Curriculum():
+class W_Training_Curriculum(W_trainer_pipeline_base):
     def __init__(self, yaml_trainer = 'trainer.yaml', yaml_curriculum = 'curriculum.yaml'):        
         with open(yaml_trainer, 'r', encoding="utf-8") as fin:
             self.trainerinfo = yaml.load(fin, Loader=yaml.FullLoader)
@@ -30,22 +20,15 @@ class W_Training_Curriculum():
             self.curriculum += [curriculum[f'Course{i+1}']]
           
         config = self.trainerinfo
-        device = config['device']
-        if device == "auto":
-            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        else:
-            self.device = device
+        self.load_device(config['device'])
         
         self.env = []
         for i in range(self.n_course):
             course = self.curriculum[i]
-            env = W_Env(course['envname'], \
-                    param_task = course['task'], \
-                    param_metadata = course['metadata'], \
-                    render_mode = None)
+            env = self.import_env(course)
             self.env += [env]
 
-        self.model = getmodel(config['model'], self.env[0], device = self.device)
+        self.load_model(config['model'], self.env[0])
         self.trainer = W_Trainer(None, self.model, param_loss = config['param_loss'], \
                             param_optim = config['param_optim'], \
                             param_logger = config['param_logger'], \

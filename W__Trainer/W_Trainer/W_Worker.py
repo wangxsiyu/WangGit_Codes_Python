@@ -122,7 +122,8 @@ class W_Worker:
             obs = torch.from_numpy(obs).unsqueeze(0).float() # [obs] nBatchsize x dim_obs (suitable for RNN)
             action_vector, LV, _ = model(obs, LV) # return action, hidden_state, additional_output can be value etc
             if recording_mode == "neurons":
-                recording_neurons.append(LV.squeeze())
+                neurons = model.get_latent_units(LV)
+                recording_neurons.append(neurons.squeeze())
             action = self.select_action(action_vector)
             obs_new, _, done, _ = env.step(action)
             obs = obs_new
