@@ -46,7 +46,7 @@ class task_ITC(W_Gym):
                 self._env_vars['choice'] = "accept"
         if self._metadata_state['statenames'][self._state] == "image":    
             sid = self._find_state('green')
-            self._metadata_state['state_timelimits'][sid] = self._param_trial['delay']
+            self._metadata_state['timelimits'][sid] = self._param_trial['delay']
         if self._metadata_state['statenames'][self._state] == "reward":
             R += self._param_trial['drop'] * self._param_rewards['R_reward']
         return R
@@ -66,28 +66,29 @@ class task_ITC(W_Gym):
             R, is_done = self._auto_state_transition()
         return is_error, R, is_done
 
-    def custom_draw_observation(self):
+    def draw_observation(self):
         if self._metadata_state['statenames'][self._state] == "image":
             timg = W.W_onehot(self._param_trial['image'], 9)
             self.draw_onehot("image", timg)
-        else:
+        elif self._metadata_state['statenames'][self._state] != "reward":
             self.draw_onehot(self._metadata_state['statenames'][self._state], 1)
         self.flip()
     
     def setup_render_parameters(self):
-        plottypes = ["circle", "image", "square", "square", "square"]
-        colors = [(255,255,255), (0,0,0), (255, 0, 0), (255, 0, 255), (0,255,0)]
-        radius = [0.02, 0.1, 0.04, 0.04, 0.04]
+        plottypes = ["image", "square", "square", "square"]
+        colors = [(0,0,0), (255, 0, 0), (255, 0, 255), (0,255,0)]
+        radius = [0.1, 0.04, 0.04, 0.04]
         self._render_set_auto_parameters('obs', plottypes, colors, radius)
-        plottypes = ["arrows"]
-        plotparams = [1,0,2,-1]
-        self._render_set_auto_parameters('action', plottypes, additional_params = plotparams)
+        plottypes = ["action_binary"]
+        # plotparams = [1,0,2,-1]
+        self._render_set_auto_parameters('action', plottypes)
     
     def custom_render_frame_obs_format(self, obs, lst):
-        c = 0
+        out = []
         for i, j in lst.items():
             if i == "image":
-                obs[c] = obs[c].reshape((3,3))
-                obs[c] = obs[c] * 128 + np.any(obs[c] > 0) * 127
-            c += 1
-        return obs
+                tobs = obs[j].reshape((3,3))
+                out += [tobs * 128 + np.any(tobs > 0) * 127]
+            else:
+                out += [obs[j]]
+        return out

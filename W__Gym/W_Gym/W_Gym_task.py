@@ -288,14 +288,13 @@ class W_Gym_task():
         if self._time_state >= self._metadata_state['timelimits'][self._state]:
             is_transition = True
         # get consequences of actions (state transition)
-        if hasattr(self, 'custom_state_transition'):
+        if not is_error and hasattr(self, 'custom_state_transition'):
             is_error, treward, t_is_done = self.custom_state_transition(action, is_effective = is_effective, is_transition = is_transition)
-        elif not is_error:
-            if is_transition:
-                treward, t_is_done = self._auto_state_transition()
-            else:
-                treward = 0
-                t_is_done = False
+        elif not is_error and is_transition:
+            treward, t_is_done = self._auto_state_transition()
+        else:
+            treward = 0
+            t_is_done = False
         # state transition
         if is_error:
             treward, t_is_done = self._abort()
