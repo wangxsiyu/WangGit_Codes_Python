@@ -29,12 +29,14 @@ class W_Training_Curriculum(W_trainer_pipeline_base):
             self.env += [env]
 
         self.load_model(config['model'], self.env[0])
+
+        save_path = config['save_path']
         self.trainer = W_Trainer(None, self.model, param_loss = config['param_loss'], \
                             param_optim = config['param_optim'], \
                             param_logger = config['param_logger'], \
                             param_buffer = config['param_buffer'], \
                             gradientclipping = config['trainer']['max-grad-norm'], \
-                            save_path = config['save_path'], \
+                            save_path = save_path, \
                             device = self.device)
         yamlsavepath = W.W_mkdir(os.path.join(config['save_path'], 'config_files'))
         with open(os.path.join(yamlsavepath, "trainerinfo.yaml"), 'w') as fout:
@@ -44,11 +46,18 @@ class W_Training_Curriculum(W_trainer_pipeline_base):
         
     def train(self, seed = 0):
         is_resume = self.trainerinfo['trainer']['is_resume']
+        if 'is_online' in self.trainerinfo['trainer'].keys():
+            is_online = self.trainerinfo['trainer']['is_online']
+        else:
+            is_online = False
         lastfile = None
         for coursei in range(self.n_course):
             self.trainer.setup_randomseed(seed)
             savepath = os.path.join(self.trainerinfo['save_path'], f"Seed{seed}")
-            savepath = W.W_mkdir(os.path.join(savepath, f"C{coursei}_{self.curriculum[coursei]['coursename']}"))
+            savename = f"C{coursei+1}_{self.curriculum[coursei]['coursename']}_{self.trainerinfo['trainer']['train_mode']}"
+            if is_online:
+                savename = savename + "_online"
+            savepath = W.W_mkdir(os.path.join(savepath, savename))
             self.trainer.reload_env(self.env[coursei])
             max_episodes = self.curriculum[coursei]['train_episodes']
             [currentfile, start_episode] = self.trainer.find_latest_model(savepath)
@@ -57,10 +66,6 @@ class W_Training_Curriculum(W_trainer_pipeline_base):
                 print(f"course {coursei} trained already: skip")
             else:
                 print(f"training course {coursei}")
-                if 'is_online' in self.trainerinfo['trainer'].keys():
-                    is_online = self.trainerinfo['trainer']['is_online']
-                else:
-                    is_online = False
                 if 'supervised_data_path' in self.trainerinfo['trainer'].keys():
                     supervised_data_path = self.trainerinfo['trainer']['supervised_data_path']
                 else:

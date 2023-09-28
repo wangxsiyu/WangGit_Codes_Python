@@ -87,6 +87,7 @@ class W_Worker:
             recordings = torch.concat(recordings).numpy()
             recordings = pd.DataFrame(recordings)
         if savename is not None:
+            savename = os.path.splitext(savename)[0] + ".csv"
             behaviors.to_csv(f"behavior_{savename}")
             if is_record:
                 recordings.to_csv(f"recording_{savename}")
