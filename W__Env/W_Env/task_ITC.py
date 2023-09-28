@@ -16,23 +16,25 @@ class task_ITC(W_Gym):
                                         'green':11})
         # set stages
         state_names = ["image", "red", \
-                       "purple", "purple_overtime", "green"]
+                       "purple", "green", "reward"]
         state_immediateadvance = ["red", "purple"]
         self.setup_state_parameters(state_names = state_names, state_immediateadvance = state_immediateadvance, \
-                        state_timelimits= [1,1,1,1,99])
+                        state_timelimits= [1,1,1,99,1])
+        self.setup_human_keys_auto('binary')
 
     def custom_reset_trial(self):
-        image = np.random.choice(9,1).astype('int32')
+        image = int(np.random.choice(9,1).astype('int32'))
         delay_vals = self._param_task['delay']
         drop_vals = self._param_task['drop']
         self._param_trial = {'image':image, 'delay':delay_vals[image], "drop": drop_vals[image]} # 1,5,10 (change this)
         self._env_vars['choice'] = None
 
     def custom_step_set_validactions(self):
-        if self._metadata_state['statenames'][self._state] in ["image","green"]:
+        if self._metadata_state['statenames'][self._state] in ["image","green","reward"]:
             self._state_valid_actions = [0]
         elif self._metadata_state['statenames'][self._state] in ["red", "purple"]:
             self._state_valid_actions = [0,1]
+            self._state_effective_actions = 1
 
     def custom_step_reward(self, action):
         R = 0
@@ -45,47 +47,32 @@ class task_ITC(W_Gym):
         if self._metadata_state['statenames'][self._state] == "image":    
             sid = self._find_state('green')
             self._metadata_state['state_timelimits'][sid] = self._param_trial['delay']
+        if self._metadata_state['statenames'][self._state] == "reward":
+            R += self._param_trial['drop'] * self._param_rewards['R_reward']
         return R
     
-    def custom_state_transition(self, action, is_effective = True):
+    def custom_state_transition(self, action, is_effective, is_transition):
         is_error = False
         R = 0
         is_done = False
         if self._metadata_state['statenames'][self._state] == "red" and is_effective:
             is_done = self._advance_trial()
-        elif self._metadata_state['statenames'][self._state] == "purple" and is_effective:
-            self._go_to_state('green')
-        else:
+        elif self._metadata_state['statenames'][self._state] == "purple":
+            if is_effective:
+                self._go_to_state('green')
+            elif is_transition and self._env_vars['choice'] is None:
+                is_error = True
+        elif is_transition:
             R, is_done = self._auto_state_transition()
-
-        if self._metadata_state['statenames'][self._state] == "purple_overtime":
-            is_error = True 
         return is_error, R, is_done
 
-    def custom_step_reward_newstate(self, action): # draft
-        R = 0
-        # get reward
-        if not self.trial_is_error and self.trial_choice == "accept" and \
-            self._metadata_state['statenames'][self._state] == "ITI":
-            R += self.param_trial['drop'] * self.Rewards['R_reward']
-        return RR
-
-    def _draw_obs(self):
+    def custom_draw_observation(self):
         if self._metadata_state['statenames'][self._state] == "image":
-            timg = W.W_onehot(self.param_trial['image'], 9)
-            self.draw("image", timg)
+            timg = W.W_onehot(self._param_trial['image'], 9)
+            self.draw_onehot("image", timg)
         else:
-            self.draw(self._metadata_state['statenames'][self._state], 1)
+            self.draw_onehot(self._metadata_state['statenames'][self._state], 1)
         self.flip()
-
-    def _render_frame_obs_format(self, obs, lst):
-        c = 0
-        for i, j in lst.items():
-            if i == "image":
-                obs[c] = obs[c].reshape((3,3))
-                obs[c] = obs[c] * 128 + np.any(obs[c] > 0) * 127
-            c += 1
-        return obs
     
     def setup_render_parameters(self):
         plottypes = ["circle", "image", "square", "square", "square"]
@@ -94,5 +81,13 @@ class task_ITC(W_Gym):
         self._render_set_auto_parameters('obs', plottypes, colors, radius)
         plottypes = ["arrows"]
         plotparams = [1,0,2,-1]
-        self._render_set_auto_parameters('action', plottypes, plotparams = plotparams)
+        self._render_set_auto_parameters('action', plottypes, additional_params = plotparams)
     
+    def custom_render_frame_obs_format(self, obs, lst):
+        c = 0
+        for i, j in lst.items():
+            if i == "image":
+                obs[c] = obs[c].reshape((3,3))
+                obs[c] = obs[c] * 128 + np.any(obs[c] > 0) * 127
+            c += 1
+        return obs
