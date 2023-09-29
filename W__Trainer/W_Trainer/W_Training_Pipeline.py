@@ -51,9 +51,10 @@ class W_Training_Curriculum(W_trainer_pipeline_base):
         else:
             is_online = False
         lastfile = None
+        modelname = self.trainerinfo['model']['name'] + '_' + self.trainerinfo['model']['param_model']['gatetype']
         for coursei in range(self.n_course):
             self.trainer.setup_randomseed(seed)
-            savepath = os.path.join(self.trainerinfo['save_path'], f"Seed{seed}")
+            savepath = os.path.join(self.trainerinfo['save_path'], f"Seed{seed}_{modelname}")
             savename = f"C{coursei+1}_{self.curriculum[coursei]['coursename']}_{self.trainerinfo['trainer']['train_mode']}"
             if is_online:
                 savename = savename + "_online"

@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from .W_RNN_gates import W_RNN_LSTM
+from .W_RNN_gates import W_RNN_LSTM, W_RNN_vanilla
 
 class W_RNN(nn.Module):
     def __init__(self, input_len, hidden_len, gatetype = "vanilla", \
@@ -30,12 +30,17 @@ class W_RNN(nn.Module):
                 h0 = nn.Parameter(h0)
                 c0 = nn.Parameter(c0)
             self.param_initial = [h0, c0]
+        elif gatetype == "vanilla":
+            h0 = torch.randn(self.RNN.rnn.hidden_size, requires_grad = is_param_initial).float()
+            if is_param_initial:
+                h0 = nn.Parameter(h0)
+            self.param_initial = [h0]
 
     def create_RNN(self, gatetype, input_len, hidden_len, *arg, **kwarg):
         if gatetype == "LSTM":
             self.RNN = W_RNN_LSTM(input_len, hidden_len)  
-        # if gatetype == "vanilla":
-        #     self.RNN = nn.RNN(input_len, hidden_len, nonlinearity = 'relu') 
+        if gatetype == "vanilla":
+            self.RNN = W_RNN_vanilla(input_len, hidden_len, nonlinearity = 'relu') 
         # if gatetype == "noise":
         #     self.RNN = W_RNNgate_noise(input_len, hidden_len, device=device, *arg, **kwarg) 
         self.RNN.to(self.device)
@@ -76,6 +81,4 @@ class W_RNN(nn.Module):
         else:
             return actionvec, hidden_state, None
         
-    def get_latent_units(self, LV):
-        return LV[0]
 
