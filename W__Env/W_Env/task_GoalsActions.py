@@ -46,7 +46,7 @@ class task_GoalsActions(W_Gym_Grid2D):
         ccc_id = np.random.choice(4,2, replace = False)
         cc_id = np.array([0,2]) + np.random.choice(2,1)
         self._param_trial = {'ccc_id': ccc_id, 'ccc_pos': cccs[ccc_id], 'cc_id':cc_id, 'cc_pos':ccs[cc_id]}
-        print(self._param_trial)
+        # print(self._param_trial)
         self._env_vars['pos_choice1'] = None
         self._env_vars['pos_choice2'] = None
     

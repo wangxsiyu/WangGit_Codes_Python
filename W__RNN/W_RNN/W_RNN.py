@@ -67,8 +67,8 @@ class W_RNN(nn.Module):
         return x
     
     def custom_forward(self, obs, hidden_state = None):
+        batch_size = obs.shape[0]
         if hidden_state is None:
-            batch_size = obs.shape[0]
             hidden_state = self.get_initial_latent_value(batch_size)   
         # obs = obs.permute((1,0,2))     
         feature, hidden_state = self.RNN(obs, hidden_state, self.device)

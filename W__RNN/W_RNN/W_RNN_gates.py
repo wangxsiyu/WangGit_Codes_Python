@@ -20,6 +20,7 @@ class W_RNN_LSTM(nn.Module):
             self.lstm.to(device)
         new, (h1, c1) =  self.lstm(input, (h0, c0))
         new = new.permute((1,0,2))
+        # return new, (h1, c1)
         return new.squeeze(0), (h1.squeeze(0), c1.squeeze(0))
     
     def get_latent_units(self, LV):

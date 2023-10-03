@@ -54,11 +54,14 @@ class W_Trainer(W_Worker):
         else:
             LV = None
         action_vector, LV, additional_output = self.model(buffer.obs, LV)
+        if len(action_vector.shape) == 2: # unbatched
+            action_vector = action_vector.unsqueeze(0)
+            additional_output = additional_output.unsqueeze(0)
         action_dist = torch.nn.functional.softmax(action_vector, dim = -1)
         # action_dist = action_dist.permute((1,0,2))
         eps = 1e-4
         action_dist = action_dist.clamp(eps, 1-eps)
-        action_onehot = W.W_onehot_array(buffer.action.squeeze(), action_dist.shape[-1]).to(self.device)
+        action_onehot = W.W_onehot_array(buffer.action.squeeze(-1), action_dist.shape[-1]).to(self.device)
         action_likelihood = (action_dist * action_onehot).sum(-1)
         tb = namedtuple('TrainingBuffer', ("action_dist", "action_likelihood","outputs"))
         return tb(action_dist, action_likelihood, additional_output)
