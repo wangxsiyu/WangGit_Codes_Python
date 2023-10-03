@@ -44,3 +44,6 @@ class W_RNN_vanilla(nn.Module):
         new = new.permute((1,0,2))
         return new.squeeze(0), h1.squeeze(0)
     
+    def get_latent_units(self, LV):
+        return LV
+    

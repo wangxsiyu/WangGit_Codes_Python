@@ -1,7 +1,8 @@
 from W_Env.W_Env import W_Env
+from W_Python.W import W
 import torch
 
-def getmodel(modelinfo, env, device):
+def getmodel(modelinfo, env = None, device = None):
     model_name = modelinfo['name']
     ldic = locals()
     exec(f"from W_RNN.{model_name} import {model_name} as W_model", globals(), ldic)
@@ -21,7 +22,7 @@ class W_trainer_pipeline_base():
         else:
             self.device = device
 
-    def load_model(self, config_model, env):
+    def load_model(self, config_model, env = None):
         self.model = getmodel(config_model, env, device = self.device)
 
     def import_env(self, config_env):
@@ -31,3 +32,12 @@ class W_trainer_pipeline_base():
                     render_mode = None)
         return env
     
+    def select_env_by_name(self, name):
+        return self.envs[W.W_list_findidx(name, self.envnames)]
+
+    def load_envs(self, config):
+        self.envs = []
+        self.envnames = list(config.keys())
+        for i in range(len(self.envnames)):
+            env = self.import_env(config[self.envnames[i]])
+            self.envs += [env]

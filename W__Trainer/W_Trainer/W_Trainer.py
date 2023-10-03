@@ -68,14 +68,12 @@ class W_Trainer(W_Worker):
     
     def resume_training(self, max_episodes, folder, is_resume = True, model_pretrained = None):
         if is_resume:
-            [filename, start_episode] = self.find_latest_model(currentfolder = folder)
-            if start_episode > 0:
-                model_pretrained = filename
+            [info, _, start_episode] = self.load_latest_model(folder)
         else:        
             start_episode = 0
-        info = self.load_model(model_pretrained)
+            info = self.load_model(model_pretrained)
         return self.logger.initialize(max_episodes, start_episode, info)
-        
+
     def train(self, savepath = '', max_episodes = 10, batch_size = 1, \
               train_mode = "RL", supervised_data_path = None, \
               is_online = False, is_resume = True, model_pretrained = None, \

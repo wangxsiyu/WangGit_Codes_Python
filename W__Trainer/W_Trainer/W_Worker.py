@@ -17,6 +17,11 @@ class W_Worker:
         self.model = model.to(device)
         self.mode_action = mode_action
 
+    def load_latest_model(self, folder):
+        [filename, episode] = self.find_latest_model(currentfolder = folder)
+        info = self.load_model(filename)
+        return info, filename, episode
+
     def find_latest_model(self, currentfolder):
         file_trained_list = os.listdir(currentfolder)
         fs = [re.search("(.*)_(.*).pt", x) for x in file_trained_list]
@@ -87,10 +92,10 @@ class W_Worker:
             recordings = torch.concat(recordings).numpy()
             recordings = pd.DataFrame(recordings)
         if savename is not None:
-            savename = os.path.splitext(savename)[0] + ".csv"
-            behaviors.to_csv(f"behavior_{savename}")
+            savename = W.W_enext(savename, 'csv')
+            behaviors.to_csv(W.W_filewrap(W.W_file_prefix(savename, 'behavior')))
             if is_record:
-                recordings.to_csv(f"recording_{savename}")
+                recordings.to_csv(W.W_filewrap(W.W_file_prefix(savename, 'recording')))
         if (not is_record) or (behaviors.shape[0] == recordings.shape[0]):
             print(f"recording complete: format check passed.")
         else:
@@ -123,7 +128,7 @@ class W_Worker:
             obs = torch.from_numpy(obs).unsqueeze(0).float() # [obs] nBatchsize x dim_obs (suitable for RNN)
             action_vector, LV, _ = model(obs, LV) # return action, hidden_state, additional_output can be value etc
             if recording_mode == "neurons":
-                neurons = model.get_latent_units(LV)
+                neurons = model.RNN.get_latent_units(LV)
                 recording_neurons.append(neurons.squeeze())
             action = self.select_action(action_vector)
             obs_new, _, done, _ = env.step(action)
