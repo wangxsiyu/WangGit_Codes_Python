@@ -6,6 +6,7 @@ import numpy as np
 import sys
 np.set_printoptions(threshold=sys.maxsize)
 import os
+import copy
 
 
 class W_Training_Curriculum(W_trainer_pipeline_base):
@@ -26,7 +27,7 @@ class W_Training_Curriculum(W_trainer_pipeline_base):
         for i in range(self.n_course):
             course = self.curriculum[i]
             env = self.import_env(course)
-            self.env += [env]
+            self.env += [copy.deepcopy(env)]
 
         self.load_model(config['model'], self.env[0])
 

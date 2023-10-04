@@ -1,6 +1,7 @@
 from W_Env.W_Env import W_Env
 from W_Python.W import W
 import torch
+import copy
 
 def getmodel(modelinfo, env = None, device = None):
     model_name = modelinfo['name']
@@ -10,7 +11,7 @@ def getmodel(modelinfo, env = None, device = None):
     info = modelinfo['param_model'].copy()
     info.update({'env': env})
     model = W_model(info_model = info, device = device)
-    return model
+    return copy.deepcopy(model)
 
 class W_trainer_pipeline_base():
     def __init__(self) -> None:
@@ -22,9 +23,12 @@ class W_trainer_pipeline_base():
         else:
             self.device = device
 
-    def load_model(self, config_model, env = None):
-        self.model = getmodel(config_model, env, device = self.device)
-
+    def load_model(self, config_model, env = None, is_auto_set = True):
+        model = getmodel(config_model, env, device = self.device)
+        if is_auto_set:
+            self.model = model
+        return model
+    
     def import_env(self, config_env):
         env = W_Env(config_env['envname'], \
                     param_task = config_env['task'], \
