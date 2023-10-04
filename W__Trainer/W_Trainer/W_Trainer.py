@@ -71,6 +71,7 @@ class W_Trainer(W_Worker):
             [info, _, start_episode] = self.load_latest_model(folder)
         else:        
             start_episode = 0
+        if start_episode == 0:
             info = self.load_model(model_pretrained)
         return self.logger.initialize(max_episodes, start_episode, info)
 
