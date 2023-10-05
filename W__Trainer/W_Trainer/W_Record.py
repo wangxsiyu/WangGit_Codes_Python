@@ -5,6 +5,8 @@ import pandas as pd
 import multiprocessing
 from joblib import Parallel, delayed
 import copy
+import numpy as np
+import matplotlib.pyplot as plt
 
 class W_record(W_trainer_pipeline_base):
     def __init__(self, yaml_setup = 'record_setup.yaml', file_record = 'record_plan.csv'):     
@@ -33,6 +35,24 @@ class W_record(W_trainer_pipeline_base):
         # self.worker.reload_env(tenv)
         worker.load_latest_model(rp.modelfolder)
         worker.record(rp.savename, n_episode = rp.n_episode, is_record = rp.is_record, *arg, **kwarg)
+
+    def plot_loss(self):
+        njob = len(self.recordplan)
+        for i in range(njob):
+            rp = self.recordplan.loc[i]
+            tenv = copy.deepcopy(self.select_env_by_name(rp.env))
+            model = self.load_model(self.config['model'][rp.modelname], tenv, is_auto_set = False)
+            worker = W_Worker(tenv, model, self.device)
+            info = worker.load_model(worker.find_latest_model(rp.modelfolder)[0])
+            ls = np.array([x['reward'] for x in info['info']])
+            ls = np.convolve(ls, np.ones((1000,))/1000, mode='same') 
+            plt.plot(np.arange(len(ls)), ls)
+        plt.ylim(0, 300)
+        plt.xlabel('training episode')
+        plt.ylabel('average reward per block')
+        plt.show()
+
+        
 
         
 
