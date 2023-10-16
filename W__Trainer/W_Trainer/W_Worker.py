@@ -21,6 +21,11 @@ class W_Worker:
         [filename, episode] = self.find_latest_model(currentfolder = folder)
         info = self.load_model(filename)
         return info, filename, episode
+    
+    def load_folder_model(self, folder, modeliter):
+        [filename, episode] = self.find_model(currentfolder = folder, modeliter = modeliter)
+        info = self.load_model(filename)
+        return info, filename, episode
 
     def find_latest_model(self, currentfolder):
         file_trained_list = os.listdir(currentfolder)
@@ -29,6 +34,21 @@ class W_Worker:
         if not len(fs) == 0:
             its = [x.group(2) for x in fs]
             tid = np.argmax([int(x) for x in its])
+            filename = os.path.join(currentfolder, fs[tid].group(0))
+            iterid = int(W.W_str_select_between_patterns(filename, '_', '\.',-1,-1))
+        else:
+            filename = None
+            iterid = 0
+        return filename, iterid
+    
+    def find_model(self, currentfolder, modeliter = None):
+        file_trained_list = os.listdir(currentfolder)
+        fs = [re.search("(.*)_(.*).pt", x) for x in file_trained_list]
+        fs = [x for x in fs if x is not None]
+        if modeliter is not None and not len(fs) == 0:
+            its = [x.group(2) for x in fs]
+            its_num = [int(x) for x in its]
+            tid = np.where(its_num == modeliter)[0][0]
             filename = os.path.join(currentfolder, fs[tid].group(0))
             iterid = int(W.W_str_select_between_patterns(filename, '_', '\.',-1,-1))
         else:

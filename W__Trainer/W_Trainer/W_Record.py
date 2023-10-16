@@ -33,7 +33,11 @@ class W_record(W_trainer_pipeline_base):
         worker = W_Worker(tenv, model, self.device)
         worker = copy.deepcopy(worker)
         # self.worker.reload_env(tenv)
-        worker.load_latest_model(rp.modelfolder)
+
+        if 'modeliter' in self.recordplan.columns:
+            worker.load_folder_model(rp.modelfolder, rp.modeliter)
+        else:
+            worker.load_latest_model(rp.modelfolder)
         worker.record(rp.savename, n_episode = rp.n_episode, is_record = rp.is_record, *arg, **kwarg)
 
     def plot_loss(self):
