@@ -89,7 +89,7 @@ class W_Worker:
             behaviors.append(behavior)
         behaviors = pd.concat(behaviors)
         if is_record:
-            recordings = torch.concat(recordings).numpy()
+            recordings = torch.vstack(recordings)
             recordings = pd.DataFrame(recordings)
         if savename is not None:
             savename = W.W_enext(savename, 'csv')
@@ -134,7 +134,7 @@ class W_Worker:
             obs_new, _, done, _ = env.step(action)
             obs = obs_new
         if recording_mode == "neurons":
-            recording_neurons = torch.concat(recording_neurons).squeeze()
+            recording_neurons = torch.vstack(recording_neurons)
         if recording_mode == "neurons":
             return env._data, recording_neurons
         else:
