@@ -1,5 +1,5 @@
 import torch.nn as nn
-# import torch
+import torch
 
 class W_RNN_LSTM(nn.Module):
     def __init__(self, input_len, hidden_len):
@@ -25,6 +25,15 @@ class W_RNN_LSTM(nn.Module):
     
     def get_latent_units(self, LV):
         return LV[0]
+    
+    def get_jacobian(self, obs, LV):
+    #    x = LV[0]
+    #    x.requires_grad_()
+    #    def f(x):
+    #        y = self.forward(torch.from_numpy(obs).unsqueeze(0).float(), (x, LV[1]))
+    #        y = y[1][0]
+    #    x_grads = torch.autograd.grad(y, x)
+        pass
     
 class W_RNN_vanilla(nn.Module):
     def __init__(self, input_len, hidden_len, *arg, **kwarg):

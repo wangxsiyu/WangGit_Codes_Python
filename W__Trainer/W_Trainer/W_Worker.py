@@ -133,6 +133,7 @@ class W_Worker:
             action = self.select_action(action_vector)
             obs_new, _, done, _ = env.step(action)
             obs = obs_new
+        #    jac = model.RNN.get_jacobian(obs, LV)
         if recording_mode == "neurons":
             recording_neurons = torch.vstack(recording_neurons)
         if recording_mode == "neurons":
